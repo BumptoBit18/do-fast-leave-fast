@@ -1,11 +1,11 @@
-package client.java.controller;
+package controller;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import client.java.network.ServerConnection;
-import client.java.model.UserSession;
-import client.java.util.SceneManager;
+import network.ServerConnection;
+import model.UserSession;
+import util.SceneManager;
 
 import java.io.IOException;
 import java.util.Map;

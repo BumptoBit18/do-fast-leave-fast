@@ -1,0 +1,17 @@
+{
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar",
+        "c:\\Users\\Lenovo\\Downloads\\javafx\\lib\\javafx.base.jar",
+        "c:\\Users\\Lenovo\\Downloads\\javafx\\lib\\javafx.controls.jar",
+        "c:\\Users\\Lenovo\\Downloads\\javafx\\lib\\javafx.fxml.jar",
+        "c:\\Users\\Lenovo\\Downloads\\javafx\\lib\\javafx.graphics.jar",
+        "c:\\Users\\Lenovo\\Downloads\\javafx\\lib\\javafx.media.jar",
+        "c:\\Users\\Lenovo\\Downloads\\javafx\\lib\\javafx.swing.jar",
+        "c:\\Users\\Lenovo\\Downloads\\javafx\\lib\\javafx.web.jar",
+        "c:\\Users\\Lenovo\\Downloads\\javafx\\lib\\javafx-swt.jar",
+        "c:\\Users\\Lenovo\\Downloads\\javafx\\lib\\jdk.jsobject.jar",
+        "c:\\Users\\Lenovo\\Downloads\\javafx\\lib\\jfx.incubator.input.jar",
+        "c:\\Users\\Lenovo\\Downloads\\javafx\\lib\\jfx.incubator.richtext.jar"
+    ]
+}
+
