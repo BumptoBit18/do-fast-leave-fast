@@ -7,6 +7,6 @@ public class Admin extends User {
 
     @Override
     public void printInfo() {
-        System.out.println("Quản trị viên: " + username);
+        System.out.println("Admin: " + username);
     }
 }

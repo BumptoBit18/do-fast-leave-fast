@@ -1,0 +1,6 @@
+db.host=db.zvmrojzygaurnxakqxlu.supabase.co
+db.port=5432
+db.name=postgres
+db.user=postgres
+db.password=your-password-here
+db.sslmode=require

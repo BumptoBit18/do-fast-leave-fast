@@ -1,4 +1,23 @@
 {
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.import.exclusions": [
+        "server/src/main/**"
+    ],
+    "java.project.sourcePaths": [
+        "src/main/java",
+        "client/java"
+    ],
+    "java.project.outputPath": ".java-build",
+    "java.project.resourcePaths": [
+        "client/resources",
+        "data"
+    ],
+    "files.exclude": {
+        "server/src/main": true
+    },
+    "search.exclude": {
+        "server/src/main": true
+    },
     "java.project.referencedLibraries": [
         "lib/**/*.jar",
         "c:\\Users\\Lenovo\\Downloads\\javafx\\lib\\javafx.base.jar",

@@ -9,6 +9,6 @@ public class Art extends Item {
 
     @Override
     public void printInfo() {
-        System.out.println("Tác phẩm nghệ thuật: " + name);
+        System.out.println("Sản phẩm nghệ thuật: " + name);
     }
 }
