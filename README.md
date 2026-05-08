@@ -28,7 +28,7 @@ Chay trong PowerShell tai thu muc goc du an:
 
 Script se:
 
-1. Bien dich `client/java` va `server/src/main`
+1. Bien dich `client/java` va `src/main/java`
 2. Copy `client/resources`
 3. Chay `ClientMain`
 

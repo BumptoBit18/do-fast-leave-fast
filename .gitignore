@@ -1,0 +1,5 @@
+target/
+.java-build/
+.java-prefs/
+sources.txt
+compile_sources.txt
