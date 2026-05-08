@@ -1,16 +1,16 @@
 # do-fast-leave-fast
 ## AuctionHub
 
-Ung dung dau gia client JavaFX hoan chinh theo bai tap lon, gom:
+Auction app hoàn chỉnh gồm:
 
-- Dang nhap theo 3 vai tro `BIDDER`, `SELLER`, `ADMIN`
-- Dang ky tai khoan moi cho `BIDDER` va `SELLER`
+- Dang nhap theo 3 vai tro Bidder, Seller, Admin
+- Dang ky tai khoan moi cho Bidder va Seller
 - Marketplace duyet phien dau gia, loc theo danh muc, xem chi tiet
 - Dat gia, xem lich su bid, chart gia va thong bao
 - Auto bid, anti-snipe, nap vi va thanh toan lot thang dau gia
 - Seller Studio tao phien moi, quan ly lot dang ban va xem thong bao
 - Admin Control xem thong ke he thong, user, payments, transactions va notifications
-- Backend `server` va du lieu duoc luu ben vung trong thu muc `data`
+- Backend "server" va du lieu duoc luu ben vung trong thu muc "data"
 
 ### Tai khoan mau
 
