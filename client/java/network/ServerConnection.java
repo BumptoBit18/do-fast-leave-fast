@@ -10,7 +10,6 @@ import app.model.TopUpRequestRecord;
 import app.model.TransactionRecord;
 import app.model.UserRole;
 import app.service.AuctionPlatformService;
-import server.network.MessageRouter;
 import shared.socket.AutoBidPayload;
 import shared.socket.AuctionPayload;
 import shared.socket.BidPayload;
@@ -22,16 +21,25 @@ import shared.socket.TopUpRequestPayload;
 import shared.socket.TransactionPayload;
 import shared.socket.UserPayload;
 
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.List;
 import java.util.Locale;
 
 public class ServerConnection {
+    private static final int DEFAULT_CONNECT_TIMEOUT_MS = 5_000;
+    private static final int DEFAULT_READ_TIMEOUT_MS = 10_000;
+
     private final AuctionPlatformService service;
-    private final MessageRouter router;
+    private final String serverHost;
+    private final int serverPort;
     private AppUser currentUser;
 
     public ServerConnection() {
-        this.router = new MessageRouter();
+        this.serverHost = readValue("auction.server.host", "AUCTION_SERVER_HOST", "127.0.0.1");
+        this.serverPort = Integer.parseInt(readValue("auction.server.port", "AUCTION_SERVER_PORT", "5050"));
         this.service = new AuctionPlatformService(this);
     }
 
@@ -253,11 +261,33 @@ public class ServerConnection {
     }
 
     private SocketResponse sendInternal(SocketRequest request) {
-        SocketResponse response = router.route(request);
-        if (!response.isSuccess()) {
-            throw new IllegalStateException(response.getMessage());
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(serverHost, serverPort), DEFAULT_CONNECT_TIMEOUT_MS);
+            socket.setSoTimeout(DEFAULT_READ_TIMEOUT_MS);
+
+            try (ObjectOutputStream output = new ObjectOutputStream(socket.getOutputStream());
+                 ObjectInputStream input = new ObjectInputStream(socket.getInputStream())) {
+                output.writeObject(request);
+                output.flush();
+
+                Object raw = input.readObject();
+                if (!(raw instanceof SocketResponse response)) {
+                    throw new IllegalStateException("Phan hoi tu server khong hop le.");
+                }
+                if (!response.isSuccess()) {
+                    throw new IllegalStateException(response.getMessage());
+                }
+                return response;
+            }
+        } catch (IllegalStateException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalStateException(
+                    "Khong ket noi duoc toi auction server %s:%d. Hay kiem tra server da chay va client dang tro dung host/port."
+                            .formatted(serverHost, serverPort),
+                    ex
+            );
         }
-        return response;
     }
 
     private AppUser mapUser(UserPayload user) {
@@ -352,5 +382,19 @@ public class ServerConnection {
         if (currentUser == null) {
             throw new IllegalStateException("Chua dang nhap.");
         }
+    }
+
+    private String readValue(String propertyKey, String envKey, String defaultValue) {
+        String propertyValue = System.getProperty(propertyKey);
+        if (propertyValue != null && !propertyValue.isBlank()) {
+            return propertyValue.trim();
+        }
+
+        String envValue = System.getenv(envKey);
+        if (envValue != null && !envValue.isBlank()) {
+            return envValue.trim();
+        }
+
+        return defaultValue;
     }
 }
