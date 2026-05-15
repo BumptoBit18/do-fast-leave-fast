@@ -5,7 +5,9 @@ import app.model.AuctionLot;
 import app.model.BidRecord;
 import app.model.UserRole;
 import app.service.AuctionPlatformService;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
@@ -19,69 +21,88 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import network.MessageListener;
 import network.ServerConnection;
+import shared.socket.RealtimeEvent;
 import ui.AppUi;
 import util.AlertUtil;
 import util.SceneManager;
 
-public class AuctionDetailController {
+public class AuctionDetailController implements MessageListener {
     private final SceneManager sceneManager;
+    private final ServerConnection serverConnection;
     private final AuctionPlatformService service;
-    private final AuctionLot auctionLot;
-    private final AppUser currentUser;
+    private final String auctionId;
+    @FXML
+    private StackPane root;
 
     public AuctionDetailController(SceneManager sceneManager, ServerConnection serverConnection, AuctionLot auctionLot) {
         this.sceneManager = sceneManager;
+        this.serverConnection = serverConnection;
         this.service = serverConnection.getService();
-        this.currentUser = service.getCurrentUser();
-        this.auctionLot = service.getAuctionById(auctionLot.getId());
+        this.auctionId = auctionLot.getId();
     }
 
-    public Parent getView() {
-        BorderPane root = new BorderPane();
-        root.getStyleClass().add("app-shell");
-        root.setPadding(new Insets(24));
+    @FXML
+    private void initialize() {
+        serverConnection.addMessageListener(this);
+        root.sceneProperty().addListener((observable, oldScene, newScene) -> {
+            if (newScene == null) {
+                serverConnection.removeMessageListener(this);
+            }
+        });
+        root.getChildren().setAll(buildView());
+    }
 
-        Button backButton = new Button("Về chợ đấu giá");
+    private Parent buildView() {
+        AuctionLot auctionLot = service.getAuctionById(auctionId);
+        AppUser currentUser = service.getCurrentUser();
+
+        BorderPane shell = new BorderPane();
+        shell.getStyleClass().add("app-shell");
+        shell.setPadding(new Insets(24));
+
+        Button backButton = new Button("Ve cho dau gia");
         backButton.setOnAction(event -> sceneManager.showAuctionList());
 
-        Button sellerButton = new Button("Khu người bán");
+        Button sellerButton = new Button("Khu nguoi ban");
         sellerButton.getStyleClass().add("secondary-button");
         sellerButton.setVisible(currentUser.getRole() != UserRole.BIDDER);
         sellerButton.setManaged(currentUser.getRole() != UserRole.BIDDER);
         sellerButton.setOnAction(event -> sceneManager.showSellerDashboard());
 
-        Button walletButton = new Button("Nạp tiền");
+        Button walletButton = new Button("Nap tien");
         walletButton.getStyleClass().add("secondary-button");
         walletButton.setOnAction(event -> sceneManager.showWallet());
 
-        Button logoutButton = new Button("Đăng xuất");
+        Button logoutButton = new Button("Dang xuat");
         logoutButton.setOnAction(event -> sceneManager.logout());
 
         VBox left = new VBox(18);
         left.setPrefWidth(420);
-        left.getChildren().addAll(overviewCard(), biddingArea());
+        left.getChildren().addAll(overviewCard(auctionLot), biddingArea(auctionLot, currentUser));
 
         TabPane tabs = new TabPane();
-        tabs.getTabs().add(new Tab("Lịch sử đặt giá", buildHistoryTable()));
-        tabs.getTabs().add(new Tab("Biểu đồ giá", new BidChartController(auctionLot).getView()));
-        tabs.getTabs().add(new Tab("Thông báo", buildNotificationPanel()));
+        tabs.getTabs().add(new Tab("Lich su dat gia", buildHistoryTable(auctionLot)));
+        tabs.getTabs().add(new Tab("Bieu do gia", new BidChartController(auctionLot).getView()));
+        tabs.getTabs().add(new Tab("Thong bao", buildNotificationPanel(auctionLot)));
         tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
 
         VBox rightPanel = AppUi.panelCard(
-                "Dòng thời gian và thông báo",
-                "Theo dõi lịch sử đặt giá, biểu đồ giá và các sự kiện liên quan tới lô.",
+                "Dong thoi gian va thong bao",
+                "Theo doi lich su dat gia, bieu do gia va cac su kien lien quan toi lo.",
                 tabs
         );
         HBox.setHgrow(tabs, Priority.ALWAYS);
 
-        root.setCenter(new VBox(
+        shell.setCenter(new VBox(
                 18,
                 AppUi.pageHeader(
-                        "Chi tiết đấu giá",
-                        auctionLot.getTitle() + " | Người bán: " + auctionLot.getSellerUsername(),
-                        auctionLot.getCategory() + " | Mã phiên: " + auctionLot.getId(),
+                        "Chi tiet dau gia",
+                        auctionLot.getTitle() + " | Nguoi ban: " + auctionLot.getSellerUsername(),
+                        auctionLot.getCategory() + " | Ma phien: " + auctionLot.getId(),
                         AppUi.badge(auctionLot.getStatusLabel()),
                         AppUi.badge(service.formatCurrency(auctionLot.getCurrentPrice())),
                         backButton,
@@ -91,24 +112,24 @@ public class AuctionDetailController {
                 ),
                 new HBox(20, left, rightPanel)
         ));
-        return root;
+        return shell;
     }
 
-    private VBox overviewCard() {
-        VBox card = AppUi.panelCard("Tổng quan lô đấu giá", "Cập nhật trạng thái theo thời gian thực của phiên đang xem.");
+    private VBox overviewCard(AuctionLot auctionLot) {
+        VBox card = AppUi.panelCard("Tong quan lo dau gia", "Cap nhat trang thai theo thoi gian thuc cua phien dang xem.");
 
-        Label title = new Label(auctionLot.getTitle() + " | Người bán: " + auctionLot.getSellerUsername());
+        Label title = new Label(auctionLot.getTitle() + " | Nguoi ban: " + auctionLot.getSellerUsername());
         title.getStyleClass().add("page-title");
 
-        Label meta = new Label(auctionLot.getCategory() + " | Mã phiên: " + auctionLot.getId());
+        Label meta = new Label(auctionLot.getCategory() + " | Ma phien: " + auctionLot.getId());
         meta.getStyleClass().add("muted-label");
 
-        Label price = new Label("Giá hiện tại: " + service.formatCurrency(auctionLot.getCurrentPrice()));
+        Label price = new Label("Gia hien tai: " + service.formatCurrency(auctionLot.getCurrentPrice()));
         price.getStyleClass().add("stat-value");
 
-        Label status = new Label("Trạng thái: " + auctionLot.getStatusLabel() + " | Còn lại: " + auctionLot.getTimeLeftLabel());
-        Label leader = new Label("Người đang dẫn đầu: " + auctionLot.getHighestBidder());
-        Label antiSnipe = new Label("Chống đặt giá sát giờ: " + (auctionLot.isAntiSnipeTriggered() ? "Đã kích hoạt" : "Chưa kích hoạt"));
+        Label status = new Label("Trang thai: " + auctionLot.getStatusLabel() + " | Con lai: " + auctionLot.getTimeLeftLabel());
+        Label leader = new Label("Nguoi dang dan dau: " + auctionLot.getHighestBidder());
+        Label antiSnipe = new Label("Chong dat gia sat gio: " + (auctionLot.isAntiSnipeTriggered() ? "Da kich hoat" : "Chua kich hoat"));
         antiSnipe.getStyleClass().add("muted-label");
 
         Label description = new Label(auctionLot.getDescription());
@@ -118,12 +139,12 @@ public class AuctionDetailController {
         return card;
     }
 
-    private Parent biddingArea() {
+    private Parent biddingArea(AuctionLot auctionLot, AppUser currentUser) {
         if (currentUser.getRole() != UserRole.BIDDER) {
             VBox box = new VBox(10);
             box.getStyleClass().add("card");
             box.setPadding(new Insets(20));
-            box.getChildren().add(new Label("Tài khoản hiện tại không phải người mua, nên chỉ có quyền xem thông tin lô."));
+            box.getChildren().add(new Label("Tai khoan hien tai khong phai nguoi mua, nen chi co quyen xem thong tin lo."));
             return box;
         }
 
@@ -133,10 +154,10 @@ public class AuctionDetailController {
             wrapper.getChildren().add(new BiddingController(auctionLot.getMinimumBid(), amount -> {
                 try {
                     service.placeBid(auctionLot, amount);
-                    AlertUtil.info("Đặt giá thành công", "Bạn đã đặt giá " + service.formatCurrency(amount));
-                    sceneManager.showAuctionDetail(auctionLot);
+                    AlertUtil.info("Dat gia thanh cong", "Ban da dat gia " + service.formatCurrency(amount));
+                    root.getChildren().setAll(buildView());
                 } catch (Exception ex) {
-                    AlertUtil.error("Không thể đặt giá", ex.getMessage());
+                    AlertUtil.error("Khong the dat gia", ex.getMessage());
                 }
             }).getView());
 
@@ -144,16 +165,16 @@ public class AuctionDetailController {
             autoBidCard.getStyleClass().add("card");
             autoBidCard.setPadding(new Insets(20));
 
-            Label autoTitle = new Label("Đặt giá tự động");
+            Label autoTitle = new Label("Dat gia tu dong");
             autoTitle.getStyleClass().add("section-title");
 
             TextField maxAmountField = new TextField(String.valueOf((long) (auctionLot.getMinimumBid() + 1_000_000)));
-            maxAmountField.setPromptText("Nhập mức trần tối đa");
+            maxAmountField.setPromptText("Nhap muc tran toi da");
 
             TextField stepField = new TextField("200000");
-            stepField.setPromptText("Nhập bước tăng mỗi lần");
+            stepField.setPromptText("Nhap buoc tang moi lan");
 
-            Button enableAutoBid = new Button("Bật đặt giá tự động");
+            Button enableAutoBid = new Button("Bat dat gia tu dong");
             enableAutoBid.getStyleClass().add("secondary-button");
             enableAutoBid.setMaxWidth(Double.MAX_VALUE);
             enableAutoBid.setOnAction(event -> {
@@ -163,17 +184,17 @@ public class AuctionDetailController {
                             Double.parseDouble(maxAmountField.getText().trim()),
                             Double.parseDouble(stepField.getText().trim())
                     );
-                    AlertUtil.info("Đã bật đặt giá tự động", "Hệ thống sẽ tự động đặt giá cho bạn theo cấu hình vừa chọn.");
-                    sceneManager.showAuctionDetail(auctionLot);
+                    AlertUtil.info("Da bat dat gia tu dong", "He thong se tu dong dat gia cho ban theo cau hinh vua chon.");
+                    root.getChildren().setAll(buildView());
                 } catch (Exception ex) {
-                    AlertUtil.error("Không bật được đặt giá tự động", ex.getMessage());
+                    AlertUtil.error("Khong bat duoc dat gia tu dong", ex.getMessage());
                 }
             });
 
             autoBidCard.getChildren().addAll(
                     autoTitle,
-                    AppUi.fieldGroup("Mức trần tối đa", "Đây là số tiền cao nhất hệ thống được phép thay bạn đặt cho lô này.", maxAmountField),
-                    AppUi.fieldGroup("Bước tăng", "Mỗi lần tự động đấu giá, hệ thống sẽ tăng theo đúng bước này nếu còn trong mức trần.", stepField),
+                    AppUi.fieldGroup("Muc tran toi da", "Day la so tien cao nhat he thong duoc phep thay ban dat cho lo nay.", maxAmountField),
+                    AppUi.fieldGroup("Buoc tang", "Moi lan tu dong dau gia, he thong se tang theo dung buoc nay neu con trong muc tran.", stepField),
                     enableAutoBid
             );
             wrapper.getChildren().add(autoBidCard);
@@ -181,41 +202,41 @@ public class AuctionDetailController {
             VBox closedCard = new VBox(10);
             closedCard.getStyleClass().add("card");
             closedCard.setPadding(new Insets(20));
-            closedCard.getChildren().add(new Label("Phiên này đã đóng nên bạn không thể đặt giá thêm."));
+            closedCard.getChildren().add(new Label("Phien nay da dong nen ban khong the dat gia them."));
 
             if (auctionLot.getHighestBidder().equalsIgnoreCase(currentUser.getUsername()) && !auctionLot.isPaid()) {
                 TextField topUpField = new TextField("5000000");
-                topUpField.setPromptText("Nhập số tiền muốn nạp thêm");
+                topUpField.setPromptText("Nhap so tien muon nap them");
 
-                Button topUpButton = new Button("Nạp tiền vào ví");
+                Button topUpButton = new Button("Nap tien vao vi");
                 topUpButton.getStyleClass().add("secondary-button");
                 topUpButton.setMaxWidth(Double.MAX_VALUE);
                 topUpButton.setOnAction(event -> {
                     try {
                         service.topUpWallet(Double.parseDouble(topUpField.getText().trim()));
-                        AlertUtil.info("Nạp tiền thành công", "Số dư mới: " + service.formatCurrency(service.getCurrentUser().getWalletBalance()));
-                        sceneManager.showAuctionDetail(auctionLot);
+                        AlertUtil.info("Nap tien thanh cong", "So du moi: " + service.formatCurrency(service.getCurrentUser().getWalletBalance()));
+                        root.getChildren().setAll(buildView());
                     } catch (Exception ex) {
-                        AlertUtil.error("Không nạp được tiền", ex.getMessage());
+                        AlertUtil.error("Khong nap duoc tien", ex.getMessage());
                     }
                 });
 
-                Button payButton = new Button("Thanh toán lô này");
+                Button payButton = new Button("Thanh toan lo nay");
                 payButton.getStyleClass().add("primary-button");
                 payButton.setMaxWidth(Double.MAX_VALUE);
                 payButton.setOnAction(event -> {
                     try {
                         service.payForAuction(auctionLot);
-                        AlertUtil.info("Thanh toán thành công", "Bạn đã thanh toán " + service.formatCurrency(auctionLot.getCurrentPrice()));
-                        sceneManager.showAuctionDetail(auctionLot);
+                        AlertUtil.info("Thanh toan thanh cong", "Ban da thanh toan " + service.formatCurrency(auctionLot.getCurrentPrice()));
+                        root.getChildren().setAll(buildView());
                     } catch (Exception ex) {
-                        AlertUtil.error("Thanh toán thất bại", ex.getMessage());
+                        AlertUtil.error("Thanh toan that bai", ex.getMessage());
                     }
                 });
 
                 closedCard.getChildren().addAll(
-                        new Label("Bạn đang là người thắng. Số dư hiện tại: " + service.formatCurrency(currentUser.getWalletBalance())),
-                        AppUi.fieldGroup("Số tiền muốn nạp thêm", "Nếu ví chưa đủ để thanh toán, hãy nạp thêm tiền trước khi bấm thanh toán.", topUpField),
+                        new Label("Ban dang la nguoi thang. So du hien tai: " + service.formatCurrency(currentUser.getWalletBalance())),
+                        AppUi.fieldGroup("So tien muon nap them", "Neu vi chua du de thanh toan, hay nap them tien truoc khi bam thanh toan.", topUpField),
                         topUpButton,
                         payButton
                 );
@@ -226,18 +247,18 @@ public class AuctionDetailController {
         return wrapper;
     }
 
-    private Parent buildHistoryTable() {
+    private Parent buildHistoryTable(AuctionLot auctionLot) {
         TableView<BidRecord> table = new TableView<>();
 
-        TableColumn<BidRecord, String> bidderColumn = new TableColumn<>("Người đặt");
+        TableColumn<BidRecord, String> bidderColumn = new TableColumn<>("Nguoi dat");
         bidderColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getBidderUsername()));
         bidderColumn.setPrefWidth(180);
 
-        TableColumn<BidRecord, String> amountColumn = new TableColumn<>("Giá");
+        TableColumn<BidRecord, String> amountColumn = new TableColumn<>("Gia");
         amountColumn.setCellValueFactory(data -> new SimpleStringProperty(service.formatCurrency(data.getValue().getAmount())));
         amountColumn.setPrefWidth(180);
 
-        TableColumn<BidRecord, String> timeColumn = new TableColumn<>("Thời gian");
+        TableColumn<BidRecord, String> timeColumn = new TableColumn<>("Thoi gian");
         timeColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getTime().toString().replace('T', ' ')));
         timeColumn.setPrefWidth(220);
 
@@ -246,11 +267,11 @@ public class AuctionDetailController {
         return table;
     }
 
-    private Parent buildNotificationPanel() {
+    private Parent buildNotificationPanel(AuctionLot auctionLot) {
         VBox wrapper = new VBox(10);
         wrapper.setPadding(new Insets(16));
 
-        Label hint = new Label("Thông báo liên quan đến lô này và các sự kiện hệ thống.");
+        Label hint = new Label("Thong bao lien quan den lo nay va cac su kien he thong.");
         hint.getStyleClass().add("muted-label");
 
         ListView<String> detailList = new ListView<>();
@@ -263,5 +284,19 @@ public class AuctionDetailController {
 
         wrapper.getChildren().addAll(hint, detailList);
         return wrapper;
+    }
+
+    @Override
+    public void onMessage(RealtimeEvent event) {
+        if (event == null) {
+            return;
+        }
+        if (event.auctionId() != null && !event.auctionId().equalsIgnoreCase(auctionId)) {
+            return;
+        }
+        if (root == null) {
+            return;
+        }
+        Platform.runLater(() -> root.getChildren().setAll(buildView()));
     }
 }

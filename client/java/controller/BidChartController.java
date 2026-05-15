@@ -19,23 +19,19 @@ public class BidChartController {
     public Parent getView() {
         CategoryAxis xAxis = new CategoryAxis();
         NumberAxis yAxis = new NumberAxis();
-        xAxis.setLabel("Lượt mua");
-        yAxis.setLabel("Giá ");
+        xAxis.setLabel("Timestamp");
+        yAxis.setLabel("Gia hien tai");
 
         LineChart<String, Number> chart = new LineChart<>(xAxis, yAxis);
         chart.setAnimated(false);
         chart.setLegendVisible(false);
-        chart.setTitle("Tiến trình đấu giá");
+        chart.setTitle("Realtime Price Curve");
         chart.getStyleClass().add("chart-card");
 
         XYChart.Series<String, Number> series = new XYChart.Series<>();
-        int index = 1;
         for (BidRecord bidRecord : FXCollections.observableArrayList(auctionLot.getBidHistory())) {
-            series.getData().add(new XYChart.Data<>(
-                    "#" + index + " - " + bidRecord.getBidderUsername(),
-                    bidRecord.getAmount()
-            ));
-            index++;
+            String timestamp = bidRecord.getTime().toString().replace('T', ' ');
+            series.getData().add(new XYChart.Data<>(timestamp, bidRecord.getAmount()));
         }
         chart.getData().add(series);
         return chart;

@@ -5,11 +5,11 @@ import app.model.AuctionLot;
 import app.model.NotificationItem;
 import app.model.UserRole;
 import app.service.AuctionPlatformService;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -25,30 +25,52 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.Window;
-import javafx.util.Duration;
+import network.MessageListener;
 import network.ServerConnection;
+import shared.socket.RealtimeEvent;
 import ui.AppUi;
 import util.SceneManager;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-public class AuctionListController {
+public class AuctionListController implements MessageListener {
     private final SceneManager sceneManager;
+    private final ServerConnection serverConnection;
     private final AuctionPlatformService service;
     private final ObservableList<AuctionLot> visibleAuctions = FXCollections.observableArrayList();
+    private final ExecutorService refreshExecutor = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "auction-list-refresh");
+        thread.setDaemon(true);
+        return thread;
+    });
+    @FXML
+    private StackPane root;
 
     public AuctionListController(SceneManager sceneManager, ServerConnection serverConnection) {
         this.sceneManager = sceneManager;
+        this.serverConnection = serverConnection;
         this.service = serverConnection.getService();
     }
 
-    public Parent getView() {
-        BorderPane root = new BorderPane();
-        root.getStyleClass().add("app-shell");
-        root.setPadding(new Insets(24));
+    @FXML
+    private void initialize() {
+        serverConnection.addMessageListener(this);
+        root.sceneProperty().addListener((observable, oldScene, newScene) -> {
+            if (newScene == null) {
+                serverConnection.removeMessageListener(this);
+            }
+        });
+        root.getChildren().setAll(buildView());
+    }
 
+    private Parent buildView() {
+        BorderPane shell = new BorderPane();
+        shell.getStyleClass().add("app-shell");
+        shell.setPadding(new Insets(24));
         AppUser currentUser = service.getCurrentUser();
 
         TextField searchField = new TextField();
@@ -159,56 +181,18 @@ public class AuctionListController {
         HBox statsStrip = new HBox(14);
         statsStrip.getStyleClass().add("stats-strip");
 
-        Runnable refreshData = () -> {
-            AppUser refreshedUser = service.getCurrentUser();
-            ObservableList<AuctionLot> auctions = service.getAuctions();
-            List<NotificationItem> notifications = service.getNotificationsForCurrentUser();
-
-            toolbarSubtitle.setText(
-                    "Xin chao " + refreshedUser.getFullName()
-                            + " | Vai tro: " + refreshedUser.getRole()
-                            + " | So du: " + service.formatCurrency(refreshedUser.getWalletBalance())
-            );
-
-            String selectedId = table.getSelectionModel().getSelectedItem() == null
-                    ? null
-                    : table.getSelectionModel().getSelectedItem().getId();
-
-            refreshAuctions(searchField.getText(), categoryBox.getValue());
-
-            if (selectedId != null) {
-                visibleAuctions.stream()
-                        .filter(item -> item.getId().equalsIgnoreCase(selectedId))
-                        .findFirst()
-                        .ifPresent(item -> table.getSelectionModel().select(item));
-            }
-            if (!visibleAuctions.isEmpty() && table.getSelectionModel().getSelectedItem() == null) {
-                table.getSelectionModel().selectFirst();
-            }
-
-            notificationList.getItems().setAll(
-                    notifications.stream()
-                            .limit(5)
-                            .map(item -> item.getTitle() + " - " + item.getMessage())
-                            .toList()
-            );
-
-            if (refreshedUser.getRole() == UserRole.BIDDER) {
-                wonLabel.setText("So lo da thang: " + service.getWonAuctionsForBidder(refreshedUser.getUsername()).size());
-            }
-
-            long liveCount = auctions.stream().filter(auction -> !auction.isClosed()).count();
-            long bidCount = auctions.stream().mapToLong(auction -> auction.getBidHistory().size()).sum();
-            double hottest = auctions.stream().mapToDouble(AuctionLot::getCurrentPrice).max().orElse(0);
-            statsStrip.getChildren().setAll(
-                    AppUi.statCard("Phien dang mo", String.valueOf(liveCount), "So phien dau gia dang dien ra"),
-                    AppUi.statCard("Tong luot gia", String.valueOf(bidCount), "Tong so lan dat gia"),
-                    AppUi.statCard("Gia cao nhat", service.formatCurrency(hottest), "Phien dau gia dat nhat"),
-                    AppUi.statCard("Thong bao", String.valueOf(notifications.size()), "Thong bao moi nhat")
-            );
-
-            updatePreview(table.getSelectionModel().getSelectedItem(), previewTitle, previewMeta, previewDescription);
-        };
+        Runnable refreshData = () -> refreshDataAsync(
+                searchField.getText(),
+                categoryBox.getValue(),
+                table,
+                toolbarSubtitle,
+                notificationList,
+                wonLabel,
+                statsStrip,
+                previewTitle,
+                previewMeta,
+                previewDescription
+        );
 
         applyFilter.setOnAction(event -> refreshData.run());
         refreshButton.setOnAction(event -> refreshData.run());
@@ -241,9 +225,8 @@ public class AuctionListController {
         );
         VBox.setVgrow(content, Priority.ALWAYS);
 
-        root.setCenter(centerBox);
-        attachAutoRefresh(root, Duration.seconds(5), refreshData);
-        return root;
+        shell.setCenter(centerBox);
+        return shell;
     }
 
     private void updatePreview(AuctionLot selected, Label previewTitle, Label previewMeta, TextArea previewDescription) {
@@ -302,35 +285,75 @@ public class AuctionListController {
         visibleAuctions.setAll(service.searchAuctions(keyword, category));
     }
 
-    private void attachAutoRefresh(Parent root, Duration interval, Runnable action) {
-        Timeline timeline = new Timeline(new KeyFrame(interval, event -> action.run()));
-        timeline.setCycleCount(Timeline.INDEFINITE);
+    @Override
+    public void onMessage(RealtimeEvent event) {
+        if (event == null || root == null || root.getChildren().isEmpty()) {
+            return;
+        }
+        Platform.runLater(() -> root.getChildren().setAll(buildView()));
+    }
 
-        root.sceneProperty().addListener((observable, oldScene, newScene) -> {
-            if (oldScene != null) {
-                timeline.stop();
-            }
-            if (newScene != null) {
-                Window window = newScene.getWindow();
-                if (window != null && window.isShowing()) {
-                    timeline.playFromStart();
-                } else {
-                    newScene.windowProperty().addListener((windowObs, oldWindow, newWindow) -> {
-                        if (newWindow != null) {
-                            newWindow.showingProperty().addListener((showingObs, wasShowing, isShowing) -> {
-                                if (isShowing) {
-                                    timeline.playFromStart();
-                                } else {
-                                    timeline.stop();
-                                }
-                            });
-                            if (newWindow.isShowing()) {
-                                timeline.playFromStart();
-                            }
-                        }
-                    });
+    private void refreshDataAsync(
+            String keyword,
+            String category,
+            TableView<AuctionLot> table,
+            Label toolbarSubtitle,
+            ListView<String> notificationList,
+            Label wonLabel,
+            HBox statsStrip,
+            Label previewTitle,
+            Label previewMeta,
+            TextArea previewDescription
+    ) {
+        String selectedId = table.getSelectionModel().getSelectedItem() == null
+                ? null
+                : table.getSelectionModel().getSelectedItem().getId();
+
+        refreshExecutor.submit(() -> {
+            AppUser refreshedUser = service.getCurrentUser();
+            ObservableList<AuctionLot> auctions = service.getAuctions();
+            List<NotificationItem> notifications = service.getNotificationsForCurrentUser();
+            List<AuctionLot> filtered = service.searchAuctions(keyword, category);
+            int wonCount = refreshedUser.getRole() == UserRole.BIDDER
+                    ? service.getWonAuctionsForBidder(refreshedUser.getUsername()).size()
+                    : 0;
+            long liveCount = auctions.stream().filter(auction -> !auction.isClosed()).count();
+            long bidCount = auctions.stream().mapToLong(auction -> auction.getBidHistory().size()).sum();
+            double hottest = auctions.stream().mapToDouble(AuctionLot::getCurrentPrice).max().orElse(0);
+
+            Platform.runLater(() -> {
+                toolbarSubtitle.setText(
+                        "Xin chao " + refreshedUser.getFullName()
+                                + " | Vai tro: " + refreshedUser.getRole()
+                                + " | So du: " + service.formatCurrency(refreshedUser.getWalletBalance())
+                );
+                visibleAuctions.setAll(filtered);
+                if (selectedId != null) {
+                    visibleAuctions.stream()
+                            .filter(item -> item.getId().equalsIgnoreCase(selectedId))
+                            .findFirst()
+                            .ifPresent(item -> table.getSelectionModel().select(item));
                 }
-            }
+                if (!visibleAuctions.isEmpty() && table.getSelectionModel().getSelectedItem() == null) {
+                    table.getSelectionModel().selectFirst();
+                }
+                notificationList.getItems().setAll(
+                        notifications.stream()
+                                .limit(5)
+                                .map(item -> item.getTitle() + " - " + item.getMessage())
+                                .toList()
+                );
+                if (refreshedUser.getRole() == UserRole.BIDDER) {
+                    wonLabel.setText("So lo da thang: " + wonCount);
+                }
+                statsStrip.getChildren().setAll(
+                        AppUi.statCard("Phien dang mo", String.valueOf(liveCount), "So phien dau gia dang dien ra"),
+                        AppUi.statCard("Tong luot gia", String.valueOf(bidCount), "Tong so lan dat gia"),
+                        AppUi.statCard("Gia cao nhat", service.formatCurrency(hottest), "Phien dau gia dat nhat"),
+                        AppUi.statCard("Thong bao", String.valueOf(notifications.size()), "Thong bao moi nhat")
+                );
+                updatePreview(table.getSelectionModel().getSelectedItem(), previewTitle, previewMeta, previewDescription);
+            });
         });
     }
 }

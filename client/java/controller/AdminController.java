@@ -8,10 +8,9 @@ import app.model.TopUpRequestRecord;
 import app.model.TransactionRecord;
 import app.model.UserRole;
 import app.service.AuctionPlatformService;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
@@ -23,10 +22,11 @@ import javafx.scene.control.TableView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.Window;
-import javafx.util.Duration;
+import network.MessageListener;
 import network.ServerConnection;
+import shared.socket.RealtimeEvent;
 import ui.AppUi;
 import util.AlertUtil;
 import util.SceneManager;
@@ -37,11 +37,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class AdminController {
-    private static final Duration AUTO_REFRESH_INTERVAL = Duration.seconds(12);
-
+public class AdminController implements MessageListener {
     private final SceneManager sceneManager;
     private final AuctionPlatformService service;
+    private final ServerConnection serverConnection;
     private final ExecutorService refreshExecutor = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "admin-refresh");
         thread.setDaemon(true);
@@ -49,16 +48,30 @@ public class AdminController {
     });
     private final AtomicBoolean statsRefreshInProgress = new AtomicBoolean(false);
     private final AtomicBoolean tabRefreshInProgress = new AtomicBoolean(false);
+    @FXML
+    private StackPane root;
 
     public AdminController(SceneManager sceneManager, ServerConnection serverConnection) {
         this.sceneManager = sceneManager;
+        this.serverConnection = serverConnection;
         this.service = serverConnection.getService();
     }
 
-    public Parent getView() {
-        BorderPane root = new BorderPane();
-        root.getStyleClass().add("app-shell");
-        root.setPadding(new Insets(24));
+    @FXML
+    private void initialize() {
+        serverConnection.addMessageListener(this);
+        root.sceneProperty().addListener((observable, oldScene, newScene) -> {
+            if (newScene == null) {
+                serverConnection.removeMessageListener(this);
+            }
+        });
+        root.getChildren().setAll(buildView());
+    }
+
+    private Parent buildView() {
+        BorderPane shell = new BorderPane();
+        shell.getStyleClass().add("app-shell");
+        shell.setPadding(new Insets(24));
 
         Button marketButton = new Button("Cho dau gia");
         marketButton.setOnAction(event -> sceneManager.showAuctionList());
@@ -135,39 +148,36 @@ public class AdminController {
                 refreshActiveTabAsync(newTab, topUpTable, auctionTable, userTable, paymentTable, transactionTable, notificationTable, true)
         );
 
-        Runnable refreshData = () -> {
-            refreshStatsAsync(subtitleLabel, statsRow, true);
-            refreshActiveTabAsync(null, topUpTable, auctionTable, userTable, paymentTable, transactionTable, notificationTable, true);
-        };
-
         refreshButton.setOnAction(event -> {
             refreshStatsAsync(subtitleLabel, statsRow, false);
-            refreshActiveTabAsync(null, topUpTable, auctionTable, userTable, paymentTable, transactionTable, notificationTable, false);
+            refreshActiveTabAsync(tabs.getSelectionModel().getSelectedItem(), topUpTable, auctionTable, userTable, paymentTable, transactionTable, notificationTable, false);
         });
-        topUpRefreshButton.setOnAction(event -> refreshActiveTabAsync(topUpTab, topUpTable, auctionTable, userTable, paymentTable, transactionTable, notificationTable, false));
+        topUpRefreshButton.setOnAction(event ->
+                refreshActiveTabAsync(topUpTab, topUpTable, auctionTable, userTable, paymentTable, transactionTable, notificationTable, false)
+        );
 
         VBox center = new VBox(
                 18,
                 AppUi.pageHeader(
                         "Admin",
                         "Bang dieu hanh he thong",
-                        "Theo doi user, thanh toan, giao dich va duyet yeu cau nap tien. Moi lan chi tai tab dang mo de giam do tre.",
+                        "Theo doi user, thanh toan, giao dich va duyet yeu cau nap tien. Du lieu duoc cap nhat theo su kien server.",
                         marketButton,
                         sellerButton,
                         walletButton,
+                        refreshButton,
                         logoutButton
                 ),
                 subtitleLabel,
                 statsRow,
-                AppUi.panelCard("Khu vuc van hanh", "Tab nao mo thi moi tai du lieu tab do.", tabs)
+                AppUi.panelCard("Khu vuc van hanh", "Chi tai du lieu tab dang mo de giam do tre tren giao dien.", tabs)
         );
         VBox.setVgrow(tabs, Priority.ALWAYS);
 
-        root.setCenter(center);
+        shell.setCenter(center);
         refreshStatsAsync(subtitleLabel, statsRow, false);
         refreshActiveTabAsync(topUpTab, topUpTable, auctionTable, userTable, paymentTable, transactionTable, notificationTable, false);
-        attachAutoRefresh(root, AUTO_REFRESH_INTERVAL, refreshData);
-        return root;
+        return shell;
     }
 
     private void refreshStatsAsync(Label subtitleLabel, HBox statsRow, boolean silent) {
@@ -208,30 +218,12 @@ public class AdminController {
         refreshExecutor.submit(() -> {
             try {
                 switch (tab) {
-                    case TOP_UP -> {
-                        List<TopUpRequestRecord> rows = List.copyOf(service.getTopUpRequests());
-                        Platform.runLater(() -> topUpTable.getItems().setAll(rows));
-                    }
-                    case AUCTION -> {
-                        List<AuctionLot> rows = List.copyOf(service.getAuctions());
-                        Platform.runLater(() -> auctionTable.getItems().setAll(rows));
-                    }
-                    case USER -> {
-                        List<AppUser> rows = List.copyOf(service.getUsers());
-                        Platform.runLater(() -> userTable.getItems().setAll(rows));
-                    }
-                    case PAYMENT -> {
-                        List<PaymentRecord> rows = List.copyOf(service.getPayments());
-                        Platform.runLater(() -> paymentTable.getItems().setAll(rows));
-                    }
-                    case TRANSACTION -> {
-                        List<TransactionRecord> rows = List.copyOf(service.getTransactions());
-                        Platform.runLater(() -> transactionTable.getItems().setAll(rows));
-                    }
-                    case NOTIFICATION -> {
-                        List<NotificationItem> rows = List.copyOf(service.getNotifications());
-                        Platform.runLater(() -> notificationTable.getItems().setAll(rows));
-                    }
+                    case TOP_UP -> Platform.runLater(() -> topUpTable.getItems().setAll(List.copyOf(service.getTopUpRequests())));
+                    case AUCTION -> Platform.runLater(() -> auctionTable.getItems().setAll(List.copyOf(service.getAuctions())));
+                    case USER -> Platform.runLater(() -> userTable.getItems().setAll(List.copyOf(service.getUsers())));
+                    case PAYMENT -> Platform.runLater(() -> paymentTable.getItems().setAll(List.copyOf(service.getPayments())));
+                    case TRANSACTION -> Platform.runLater(() -> transactionTable.getItems().setAll(List.copyOf(service.getTransactions())));
+                    case NOTIFICATION -> Platform.runLater(() -> notificationTable.getItems().setAll(List.copyOf(service.getNotifications())));
                 }
             } catch (Exception ex) {
                 if (!silent) {
@@ -273,7 +265,7 @@ public class AdminController {
     }
 
     private void applyStatsSnapshot(Label subtitleLabel, HBox statsRow, AdminStatsSnapshot snapshot) {
-        subtitleLabel.setText("Dong bo cloud moi 12 giay. Admin tab dang mo moi tai du lieu de giam lag.");
+        subtitleLabel.setText("Dashboard admin dang nhan cap nhat realtime tu server. Chi tab dang mo moi tai lai du lieu.");
         statsRow.getChildren().setAll(
                 AppUi.statCard("Phien mo", String.valueOf(snapshot.openCount()), "Phien dang hoat dong"),
                 AppUi.statCard("Phien dong", String.valueOf(snapshot.finishedCount()), "Phien da ket thuc"),
@@ -452,36 +444,12 @@ public class AdminController {
         return table;
     }
 
-    private void attachAutoRefresh(Parent root, Duration interval, Runnable action) {
-        Timeline timeline = new Timeline(new KeyFrame(interval, event -> action.run()));
-        timeline.setCycleCount(Timeline.INDEFINITE);
-
-        root.sceneProperty().addListener((observable, oldScene, newScene) -> {
-            if (oldScene != null) {
-                timeline.stop();
-            }
-            if (newScene != null) {
-                Window window = newScene.getWindow();
-                if (window != null && window.isShowing()) {
-                    timeline.playFromStart();
-                } else {
-                    newScene.windowProperty().addListener((windowObs, oldWindow, newWindow) -> {
-                        if (newWindow != null) {
-                            newWindow.showingProperty().addListener((showingObs, wasShowing, isShowing) -> {
-                                if (isShowing) {
-                                    timeline.playFromStart();
-                                } else {
-                                    timeline.stop();
-                                }
-                            });
-                            if (newWindow.isShowing()) {
-                                timeline.playFromStart();
-                            }
-                        }
-                    });
-                }
-            }
-        });
+    @Override
+    public void onMessage(RealtimeEvent event) {
+        if (root == null || root.getChildren().isEmpty()) {
+            return;
+        }
+        Platform.runLater(() -> root.getChildren().setAll(buildView()));
     }
 
     private enum AdminTab {
