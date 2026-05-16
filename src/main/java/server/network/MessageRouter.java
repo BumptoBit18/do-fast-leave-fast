@@ -84,9 +84,12 @@ public class MessageRouter {
 
     private void syncForAction(String action) {
         switch (action) {
-            case "LOGIN", "REGISTER" -> server.reloadUsers();
+            /**
+             * Nhom chi doc thong tin: khong reload lai neu data ko thay doi
+             */
+            case "LOGIN", "REGISTER" -> server.reLoadUsersIfNeeded();
             case "GET_AUCTIONS", "GET_AUCTION_BY_ID", "SEARCH_AUCTIONS", "GET_AUCTIONS_FOR_SELLER",
-                    "GET_AUCTIONS_FOR_BIDDER", "GET_WON_AUCTIONS" -> server.reloadAuctions();
+                    "GET_AUCTIONS_FOR_BIDDER", "GET_WON_AUCTIONS" -> server.reloadAuctionIfNeeded();
             case "CREATE_AUCTION", "PLACE_BID", "ENABLE_AUTO_BID", "PAY_AUCTION", "CANCEL_AUCTION" -> {
                 server.reloadAuctions();
                 server.reloadUsers();

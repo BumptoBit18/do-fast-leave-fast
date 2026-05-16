@@ -1,6 +1,7 @@
 package controller;
 
 import app.model.UserRole;
+import javafx.fxml.FXML;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -27,6 +28,8 @@ import java.util.concurrent.Executors;
 public class LoginController {
     private final SceneManager sceneManager;
     private final ServerConnection serverConnection;
+    @FXML
+    private StackPane root;
     private final ExecutorService authExecutor = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "auth-worker");
         thread.setDaemon(true);
@@ -38,7 +41,16 @@ public class LoginController {
         this.serverConnection = serverConnection;
     }
 
+    @FXML
+    private void initialize() {
+        root.getChildren().setAll(buildView());
+    }
+
     public Parent getView() {
+        return root;
+    }
+
+    private Parent buildView() {
         VBox hero = new VBox(16);
         hero.getStyleClass().add("hero-panel");
         hero.setPadding(new Insets(36));
@@ -202,11 +214,11 @@ public class LoginController {
         content.setMaxWidth(1240);
         content.getStyleClass().add("auth-layout");
 
-        StackPane root = new StackPane(content);
-        root.getStyleClass().addAll("app-shell", "auth-root");
-        root.setPadding(new Insets(24));
-        root.setMinSize(1180, 760);
-        return root;
+        StackPane container = new StackPane(content);
+        container.getStyleClass().addAll("app-shell", "auth-root");
+        container.setPadding(new Insets(24));
+        container.setMinSize(1180, 760);
+        return container;
     }
 
     private void setBusy(boolean busy, Button loginButton, Button registerButton) {

@@ -1,6 +1,8 @@
 package shared.socket;
 
 import java.io.Serializable;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class SocketRequest implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -193,5 +195,66 @@ public class SocketRequest implements Serializable {
 
     public void setDurationHours(int durationHours) {
         this.durationHours = durationHours;
+    }
+
+    public Map<String, Object> toMap() {
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("action", action);
+        values.put("actorUsername", actorUsername);
+        values.put("username", username);
+        values.put("password", password);
+        values.put("role", role);
+        values.put("fullName", fullName);
+        values.put("keyword", keyword);
+        values.put("category", category);
+        values.put("auctionId", auctionId);
+        values.put("title", title);
+        values.put("description", description);
+        values.put("imageHint", imageHint);
+        values.put("bankName", bankName);
+        values.put("accountName", accountName);
+        values.put("accountNumber", accountNumber);
+        values.put("requestId", requestId);
+        values.put("amount", amount);
+        values.put("maxAmount", maxAmount);
+        values.put("incrementStep", incrementStep);
+        values.put("startPrice", startPrice);
+        values.put("durationHours", durationHours);
+        return values;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static SocketRequest fromMap(Map<String, Object> values) {
+        SocketRequest request = new SocketRequest();
+        request.setAction((String) values.get("action"));
+        request.setActorUsername((String) values.get("actorUsername"));
+        request.setUsername((String) values.get("username"));
+        request.setPassword((String) values.get("password"));
+        request.setRole((String) values.get("role"));
+        request.setFullName((String) values.get("fullName"));
+        request.setKeyword((String) values.get("keyword"));
+        request.setCategory((String) values.get("category"));
+        request.setAuctionId((String) values.get("auctionId"));
+        request.setTitle((String) values.get("title"));
+        request.setDescription((String) values.get("description"));
+        request.setImageHint((String) values.get("imageHint"));
+        request.setBankName((String) values.get("bankName"));
+        request.setAccountName((String) values.get("accountName"));
+        request.setAccountNumber((String) values.get("accountNumber"));
+        request.setRequestId((String) values.get("requestId"));
+        request.setAmount(asDouble(values.get("amount")));
+        request.setMaxAmount(asDouble(values.get("maxAmount")));
+        request.setIncrementStep(asDouble(values.get("incrementStep")));
+        request.setStartPrice(asDouble(values.get("startPrice")));
+        request.setDurationHours(asInt(values.get("durationHours")));
+        return request;
+    }
+
+    private static double asDouble(Object value) {
+        return value instanceof Number number ? number.doubleValue() : 0;
+    }
+
+    private static int asInt(Object value) {
+        return value instanceof Number number ? number.intValue() : 0;
     }
 }

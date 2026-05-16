@@ -1,6 +1,8 @@
 package shared.socket;
 
 import java.io.Serializable;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class SocketResponse implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -37,5 +39,20 @@ public class SocketResponse implements Serializable {
 
     public Object getPayload() {
         return payload;
+    }
+
+    public Map<String, Object> toMap() {
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("success", success);
+        values.put("message", message);
+        values.put("payload", payload);
+        return values;
+    }
+
+    public static SocketResponse fromMap(Map<String, Object> values) {
+        Object payload = values.get("payload");
+        String message = values.get("message") == null ? null : String.valueOf(values.get("message"));
+        boolean success = values.get("success") instanceof Boolean bool && bool;
+        return new SocketResponse(success, message, payload);
     }
 }

@@ -3,7 +3,9 @@ package controller;
 import app.model.AppUser;
 import app.model.AuctionLot;
 import app.service.AuctionPlatformService;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
@@ -18,48 +20,66 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import network.MessageListener;
 import network.ServerConnection;
+import shared.socket.RealtimeEvent;
 import ui.AppUi;
 import util.AlertUtil;
 import util.SceneManager;
 
-public class SellerController {
+public class SellerController implements MessageListener {
     private final SceneManager sceneManager;
+    private final ServerConnection serverConnection;
     private final AuctionPlatformService service;
+    @FXML
+    private StackPane root;
 
     public SellerController(SceneManager sceneManager, ServerConnection serverConnection) {
         this.sceneManager = sceneManager;
+        this.serverConnection = serverConnection;
         this.service = serverConnection.getService();
     }
 
-    public Parent getView() {
-        BorderPane root = new BorderPane();
-        root.getStyleClass().add("app-shell");
-        root.setPadding(new Insets(24));
+    @FXML
+    private void initialize() {
+        serverConnection.addMessageListener(this);
+        root.sceneProperty().addListener((observable, oldScene, newScene) -> {
+            if (newScene == null) {
+                serverConnection.removeMessageListener(this);
+            }
+        });
+        root.getChildren().setAll(buildView());
+    }
+
+    private Parent buildView() {
+        BorderPane shell = new BorderPane();
+        shell.getStyleClass().add("app-shell");
+        shell.setPadding(new Insets(24));
         AppUser currentUser = service.getCurrentUser();
 
-        Button marketButton = new Button("Chợ đấu giá");
+        Button marketButton = new Button("Cho dau gia");
         marketButton.setOnAction(event -> sceneManager.showAuctionList());
 
-        Button adminButton = new Button("Hệ thống admin");
+        Button adminButton = new Button("He thong admin");
         adminButton.getStyleClass().add("secondary-button");
         adminButton.setVisible(currentUser.getRole().name().equals("ADMIN"));
         adminButton.setManaged(currentUser.getRole().name().equals("ADMIN"));
         adminButton.setOnAction(event -> sceneManager.showAdminPanel());
 
-        Button logoutButton = new Button("Đăng xuất");
+        Button logoutButton = new Button("Dang xuat");
         logoutButton.setOnAction(event -> sceneManager.logout());
 
         TableView<AuctionLot> sellerTable = buildSellerTable();
         sellerTable.getItems().setAll(service.getAuctionsForSeller(currentUser.getUsername()));
 
-        Button cancelButton = new Button("Hủy phiên đã chọn");
+        Button cancelButton = new Button("Huy phien da chon");
         cancelButton.getStyleClass().add("secondary-button");
         cancelButton.setOnAction(event -> {
             AuctionLot selected = sellerTable.getSelectionModel().getSelectedItem();
             if (selected == null) {
-                AlertUtil.error("Chưa chọn phiên", "Hãy chọn một phiên để hủy.");
+                AlertUtil.error("Chua chon phien", "Hay chon mot phien de huy.");
                 return;
             }
             service.cancelAuction(selected);
@@ -76,12 +96,12 @@ public class SellerController {
         );
 
         VBox left = AppUi.panelCard(
-                "Bảng quản lý gian hàng",
-                "Theo dõi các lô đang bán, số dư ví và thông báo dành cho người bán.",
-                AppUi.statCard("Tổng lô", String.valueOf(sellerTable.getItems().size()), "Danh sách hiện tại"),
-                AppUi.statCard("Số dư ví", service.formatCurrency(currentUser.getWalletBalance()), "Tiền có thể nhận hoặc sử dụng"),
+                "Bang quan ly gian hang",
+                "Theo doi cac lo dang ban, so du vi va thong bao danh cho nguoi ban.",
+                AppUi.statCard("Tong lo", String.valueOf(sellerTable.getItems().size()), "Danh sach hien tai"),
+                AppUi.statCard("So du vi", service.formatCurrency(currentUser.getWalletBalance()), "Tien co the nhan hoac su dung"),
                 sellerTable,
-                new Label("Thông báo gần đây"),
+                new Label("Thong bao gan day"),
                 sellerNotifications,
                 cancelButton
         );
@@ -92,39 +112,39 @@ public class SellerController {
         HBox content = new HBox(20, left, form);
         HBox.setHgrow(left, Priority.ALWAYS);
 
-        root.setCenter(new VBox(
+        shell.setCenter(new VBox(
                 18,
                 AppUi.pageHeader(
-                        "Người bán",
-                        "Khu vực quản lý gian hàng",
-                        "Tạo lô mới, theo dõi hàng đang bán và xử lý thông báo giao dịch.",
-                        AppUi.badge("Gian hàng"),
-                        AppUi.badge("Ví tiền"),
+                        "Nguoi ban",
+                        "Khu vuc quan ly gian hang",
+                        "Tao lo moi, theo doi hang dang ban va xu ly thong bao giao dich.",
+                        AppUi.badge("Gian hang"),
+                        AppUi.badge("Vi tien"),
                         marketButton,
                         adminButton,
                         logoutButton
                 ),
                 content
         ));
-        return root;
+        return shell;
     }
 
     private TableView<AuctionLot> buildSellerTable() {
         TableView<AuctionLot> table = new TableView<>();
 
-        TableColumn<AuctionLot, String> titleColumn = new TableColumn<>("Sản phẩm");
+        TableColumn<AuctionLot, String> titleColumn = new TableColumn<>("San pham");
         titleColumn.setCellValueFactory(data -> data.getValue().titleProperty());
         titleColumn.setPrefWidth(220);
 
-        TableColumn<AuctionLot, String> priceColumn = new TableColumn<>("Giá hiện tại");
+        TableColumn<AuctionLot, String> priceColumn = new TableColumn<>("Gia hien tai");
         priceColumn.setCellValueFactory(data -> new SimpleStringProperty(service.formatCurrency(data.getValue().getCurrentPrice())));
         priceColumn.setPrefWidth(140);
 
-        TableColumn<AuctionLot, String> statusColumn = new TableColumn<>("Trạng thái");
+        TableColumn<AuctionLot, String> statusColumn = new TableColumn<>("Trang thai");
         statusColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getStatusLabel()));
         statusColumn.setPrefWidth(110);
 
-        TableColumn<AuctionLot, String> endColumn = new TableColumn<>("Thời gian còn lại");
+        TableColumn<AuctionLot, String> endColumn = new TableColumn<>("Thoi gian con lai");
         endColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getTimeLeftLabel()));
         endColumn.setPrefWidth(140);
 
@@ -133,11 +153,11 @@ public class SellerController {
     }
 
     private VBox buildCreateForm() {
-        VBox form = AppUi.panelCard("Tạo phiên đấu giá mới", "Điền đầy đủ thông tin sản phẩm trước khi đăng lên hệ thống.");
+        VBox form = AppUi.panelCard("Tao phien dau gia moi", "Dien day du thong tin san pham truoc khi dang len he thong.");
         form.setPrefWidth(380);
 
         TextField itemName = new TextField();
-        itemName.setPromptText("Ví dụ: MacBook Pro M3");
+        itemName.setPromptText("Vi du: MacBook Pro M3");
 
         ComboBox<String> category = new ComboBox<>();
         category.getItems().addAll("Electronics", "Vehicle", "Art", "Collectible", "Luxury");
@@ -145,19 +165,19 @@ public class SellerController {
         category.setMaxWidth(Double.MAX_VALUE);
 
         TextField startPrice = new TextField();
-        startPrice.setPromptText("Ví dụ: 25000000");
+        startPrice.setPromptText("Vi du: 25000000");
 
         Spinner<Integer> duration = new Spinner<>(6, 168, 24);
         duration.setEditable(true);
 
         TextField imageHint = new TextField();
-        imageHint.setPromptText("Ví dụ: Laptop màu bạc, còn mới");
+        imageHint.setPromptText("Vi du: Laptop mau bac, con moi");
 
         TextArea description = new TextArea();
-        description.setPromptText("Mô tả chi tiết tình trạng, phụ kiện, xuất xứ...");
+        description.setPromptText("Mo ta chi tiet tinh trang, phu kien, xuat xu...");
         description.setPrefRowCount(6);
 
-        Button createButton = new Button("Đăng phiên ngay");
+        Button createButton = new Button("Dang phien ngay");
         createButton.getStyleClass().add("primary-button");
         createButton.setMaxWidth(Double.MAX_VALUE);
         createButton.setOnAction(event -> {
@@ -171,22 +191,30 @@ public class SellerController {
                         duration.getValue(),
                         imageHint.getText().trim()
                 );
-                AlertUtil.info("Tạo thành công", "Phiên đấu giá mới đã được tạo.");
+                AlertUtil.info("Tao thanh cong", "Phien dau gia moi da duoc tao.");
                 sceneManager.showSellerDashboard();
             } catch (Exception ex) {
-                AlertUtil.error("Không tạo được phiên", "Kiểm tra dữ liệu đầu vào. " + ex.getMessage());
+                AlertUtil.error("Khong tao duoc phien", "Kiem tra du lieu dau vao. " + ex.getMessage());
             }
         });
 
         form.getChildren().addAll(
-                AppUi.fieldGroup("Tên sản phẩm", "Đây là tên chính hiển thị cho người mua trong danh sách đấu giá.", itemName),
-                AppUi.fieldGroup("Danh mục", "Chọn nhóm phù hợp để người mua lọc sản phẩm dễ hơn.", category),
-                AppUi.fieldGroup("Giá khởi điểm", "Nhập mức giá ban đầu cho phiên đấu giá, chưa bao gồm các lần đặt tiếp theo.", startPrice),
-                AppUi.fieldGroup("Thời lượng phiên (giờ)", "Chọn số giờ phiên đấu giá sẽ mở trước khi tự động kết thúc.", duration),
-                AppUi.fieldGroup("Gợi ý hình ảnh", "Mô tả ngắn về hình ảnh hoặc diện mạo sản phẩm để hệ thống hiển thị ngữ cảnh tốt hơn.", imageHint),
-                AppUi.fieldGroup("Mô tả chi tiết", "Ghi rõ tình trạng sản phẩm, phụ kiện kèm theo và các lưu ý cần thiết.", description),
+                AppUi.fieldGroup("Ten san pham", "Day la ten chinh hien thi cho nguoi mua trong danh sach dau gia.", itemName),
+                AppUi.fieldGroup("Danh muc", "Chon nhom phu hop de nguoi mua loc san pham de hon.", category),
+                AppUi.fieldGroup("Gia khoi diem", "Nhap muc gia ban dau cho phien dau gia, chua bao gom cac lan dat tiep theo.", startPrice),
+                AppUi.fieldGroup("Thoi luong phien (gio)", "Chon so gio phien dau gia se mo truoc khi tu dong ket thuc.", duration),
+                AppUi.fieldGroup("Goi y hinh anh", "Mo ta ngan ve hinh anh hoac dien mao san pham de he thong hien thi ngu canh tot hon.", imageHint),
+                AppUi.fieldGroup("Mo ta chi tiet", "Ghi ro tinh trang san pham, phu kien kem theo va cac luu y can thiet.", description),
                 createButton
         );
         return form;
+    }
+
+    @Override
+    public void onMessage(RealtimeEvent event) {
+        if (root == null) {
+            return;
+        }
+        Platform.runLater(() -> root.getChildren().setAll(buildView()));
     }
 }

@@ -10,6 +10,7 @@ import app.model.UserRole;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import network.ServerConnection;
+import shared.socket.RealtimeEvent;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -274,6 +275,48 @@ public class AuctionPlatformService {
 
     public String formatCurrency(double amount) {
         return String.format(Locale.US, "%,.0f VND", amount);
+    }
+
+    public void handleServerEvent(RealtimeEvent event) {
+        if (event == null || event.type() == null) {
+            return;
+        }
+
+        switch (event.type()) {
+            case "AUCTION_UPDATED" -> {
+                cachedAuctions = List.of();
+                auctionsFetchedAt = 0;
+            }
+            case "USER_UPDATED" -> {
+                currentUserFetchedAt = 0;
+                cachedUsers = List.of();
+                usersFetchedAt = 0;
+            }
+            case "NOTIFICATION_UPDATED" -> {
+                cachedCurrentUserNotifications = List.of();
+                currentUserNotificationsFetchedAt = 0;
+                cachedAllNotifications = List.of();
+                allNotificationsFetchedAt = 0;
+            }
+            case "TOP_UP_UPDATED" -> {
+                cachedTopUpRequests = List.of();
+                topUpRequestsFetchedAt = 0;
+                currentUserFetchedAt = 0;
+            }
+            case "PAYMENT_UPDATED" -> {
+                cachedPayments = List.of();
+                paymentsFetchedAt = 0;
+                currentUserFetchedAt = 0;
+                cachedAuctions = List.of();
+                auctionsFetchedAt = 0;
+            }
+            case "TRANSACTION_UPDATED" -> {
+                cachedTransactions = List.of();
+                transactionsFetchedAt = 0;
+            }
+            default -> {
+            }
+        }
     }
 
     private List<AuctionLot> getCachedAuctions() {

@@ -10,41 +10,61 @@ import app.model.TopUpRequestRecord;
 import app.model.TransactionRecord;
 import app.model.UserRole;
 import app.service.AuctionPlatformService;
-import shared.socket.AutoBidPayload;
-import shared.socket.AuctionPayload;
-import shared.socket.BidPayload;
-import shared.socket.NotificationPayload;
-import shared.socket.PaymentPayload;
+import shared.json.JsonCodec;
+import shared.socket.RealtimeEvent;
 import shared.socket.SocketRequest;
 import shared.socket.SocketResponse;
-import shared.socket.TopUpRequestPayload;
-import shared.socket.TransactionPayload;
-import shared.socket.UserPayload;
 
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-public class ServerConnection {
+public class ServerConnection implements MessageListener {
     private static final int DEFAULT_CONNECT_TIMEOUT_MS = 5_000;
     private static final int DEFAULT_READ_TIMEOUT_MS = 10_000;
 
     private final AuctionPlatformService service;
     private final String serverHost;
     private final int serverPort;
+    private final ServerEventClient eventClient;
+    private final List<MessageListener> messageListeners = new CopyOnWriteArrayList<>();
     private AppUser currentUser;
 
     public ServerConnection() {
         this.serverHost = readValue("auction.server.host", "AUCTION_SERVER_HOST", "127.0.0.1");
         this.serverPort = Integer.parseInt(readValue("auction.server.port", "AUCTION_SERVER_PORT", "5050"));
         this.service = new AuctionPlatformService(this);
+        this.eventClient = new ServerEventClient(serverHost, serverPort, this);
     }
 
     public AuctionPlatformService getService() {
         return service;
+    }
+
+    public void addMessageListener(MessageListener listener) {
+        messageListeners.add(listener);
+    }
+
+    public void removeMessageListener(MessageListener listener) {
+        messageListeners.remove(listener);
+    }
+
+    @Override
+    public void onMessage(RealtimeEvent event) {
+        service.handleServerEvent(event);
+        for (MessageListener listener : new ArrayList<>(messageListeners)) {
+            listener.onMessage(event);
+        }
     }
 
     public AppUser login(String username, String password, UserRole role) {
@@ -53,7 +73,8 @@ public class ServerConnection {
         request.setUsername(username);
         request.setPassword(password);
         request.setRole(role.name());
-        currentUser = mapUser(send(request, UserPayload.class));
+        currentUser = mapUser(sendObject(request));
+        eventClient.connect(currentUser.getUsername());
         return currentUser;
     }
 
@@ -64,11 +85,12 @@ public class ServerConnection {
         request.setPassword(password);
         request.setFullName(fullName);
         request.setRole(role.name());
-        return mapUser(send(request, UserPayload.class));
+        return mapUser(sendObject(request));
     }
 
     public void logout() {
         currentUser = null;
+        eventClient.disconnect();
     }
 
     public AppUser getCurrentUser() {
@@ -78,21 +100,21 @@ public class ServerConnection {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_CURRENT_USER");
         request.setActorUsername(currentUser.getUsername());
-        currentUser = mapUser(send(request, UserPayload.class));
+        currentUser = mapUser(sendObject(request));
         return currentUser;
     }
 
     public List<AuctionLot> getAuctions() {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_AUCTIONS");
-        return mapAuctions(sendList(request));
+        return mapAuctions(sendObjectList(request));
     }
 
     public AuctionLot getAuctionById(String auctionId) {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_AUCTION_BY_ID");
         request.setAuctionId(auctionId);
-        return mapAuction(send(request, AuctionPayload.class));
+        return mapAuction(sendObject(request));
     }
 
     public List<AuctionLot> searchAuctions(String keyword, String category) {
@@ -100,34 +122,34 @@ public class ServerConnection {
         request.setAction("SEARCH_AUCTIONS");
         request.setKeyword(keyword);
         request.setCategory(category);
-        return mapAuctions(sendList(request));
+        return mapAuctions(sendObjectList(request));
     }
 
     public List<AppUser> getUsers() {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_USERS");
-        return mapUsers(sendList(request));
+        return mapUsers(sendObjectList(request));
     }
 
     public List<AuctionLot> getAuctionsForSeller(String sellerUsername) {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_AUCTIONS_FOR_SELLER");
         request.setUsername(sellerUsername);
-        return mapAuctions(sendList(request));
+        return mapAuctions(sendObjectList(request));
     }
 
     public List<AuctionLot> getAuctionsForBidder(String bidderUsername) {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_AUCTIONS_FOR_BIDDER");
         request.setUsername(bidderUsername);
-        return mapAuctions(sendList(request));
+        return mapAuctions(sendObjectList(request));
     }
 
     public List<AuctionLot> getWonAuctions(String bidderUsername) {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_WON_AUCTIONS");
         request.setUsername(bidderUsername);
-        return mapAuctions(sendList(request));
+        return mapAuctions(sendObjectList(request));
     }
 
     public AuctionLot createAuction(String sellerUsername, String title, String category, String description, double startPrice, int durationHours, String imageHint) {
@@ -140,7 +162,7 @@ public class ServerConnection {
         request.setStartPrice(startPrice);
         request.setDurationHours(durationHours);
         request.setImageHint(imageHint);
-        return mapAuction(send(request, AuctionPayload.class));
+        return mapAuction(sendObject(request));
     }
 
     public AuctionLot placeBid(String auctionId, double amount) {
@@ -150,7 +172,7 @@ public class ServerConnection {
         request.setAuctionId(auctionId);
         request.setActorUsername(currentUser.getUsername());
         request.setAmount(amount);
-        return mapAuction(send(request, AuctionPayload.class));
+        return mapAuction(sendObject(request));
     }
 
     public AuctionLot enableAutoBid(String auctionId, double maxAmount, double incrementStep) {
@@ -161,7 +183,7 @@ public class ServerConnection {
         request.setActorUsername(currentUser.getUsername());
         request.setMaxAmount(maxAmount);
         request.setIncrementStep(incrementStep);
-        return mapAuction(send(request, AuctionPayload.class));
+        return mapAuction(sendObject(request));
     }
 
     public AppUser topUpWallet(double amount) {
@@ -177,7 +199,7 @@ public class ServerConnection {
         request.setBankName(bankName);
         request.setAccountName(accountName);
         request.setAccountNumber(accountNumber);
-        return mapTopUpRequest(send(request, TopUpRequestPayload.class));
+        return mapTopUpRequest(sendObject(request));
     }
 
     public AppUser approveTopUpRequest(String requestId) {
@@ -186,14 +208,14 @@ public class ServerConnection {
         request.setAction("APPROVE_TOP_UP");
         request.setActorUsername(currentUser.getUsername());
         request.setRequestId(requestId);
-        currentUser = mapUser(send(request, UserPayload.class));
+        currentUser = mapUser(sendObject(request));
         return currentUser;
     }
 
     public List<TopUpRequestRecord> getTopUpRequests() {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_TOP_UP_REQUESTS");
-        return mapTopUpRequests(sendList(request));
+        return mapTopUpRequests(sendObjectList(request));
     }
 
     public AuctionLot payForAuction(String auctionId) {
@@ -202,7 +224,7 @@ public class ServerConnection {
         request.setAction("PAY_AUCTION");
         request.setAuctionId(auctionId);
         request.setActorUsername(currentUser.getUsername());
-        return mapAuction(send(request, AuctionPayload.class));
+        return mapAuction(sendObject(request));
     }
 
     public AuctionLot cancelAuction(String auctionId) {
@@ -211,13 +233,13 @@ public class ServerConnection {
         request.setAction("CANCEL_AUCTION");
         request.setAuctionId(auctionId);
         request.setActorUsername(currentUser.getUsername());
-        return mapAuction(send(request, AuctionPayload.class));
+        return mapAuction(sendObject(request));
     }
 
     public List<NotificationItem> getNotifications() {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_NOTIFICATIONS");
-        return mapNotifications(sendList(request));
+        return mapNotifications(sendObjectList(request));
     }
 
     public List<NotificationItem> getNotificationsForCurrentUser() {
@@ -225,55 +247,60 @@ public class ServerConnection {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_NOTIFICATIONS_FOR_USER");
         request.setActorUsername(currentUser.getUsername());
-        return mapNotifications(sendList(request));
+        return mapNotifications(sendObjectList(request));
     }
 
     public List<PaymentRecord> getPayments() {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_PAYMENTS");
-        return mapPayments(sendList(request));
+        return mapPayments(sendObjectList(request));
     }
 
     public List<TransactionRecord> getTransactions() {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_TRANSACTIONS");
-        return mapTransactions(sendList(request));
+        return mapTransactions(sendObjectList(request));
     }
 
     public AppUser refreshCurrentUser() {
         return getCurrentUser();
     }
 
-    private <T> T send(SocketRequest request, Class<T> payloadType) {
+    private Map<String, Object> sendObject(SocketRequest request) {
         SocketResponse response = sendInternal(request);
         Object payload = response.getPayload();
-        if (payload == null) {
-            return null;
-        }
-        return payloadType.cast(payload);
+        return payload == null ? null : castMap(payload);
+    }
+
+    private List<Map<String, Object>> sendObjectList(SocketRequest request) {
+        SocketResponse response = sendInternal(request);
+        Object payload = response.getPayload();
+        return payload == null ? List.of() : castList(payload);
     }
 
     @SuppressWarnings("unchecked")
-    private <T> List<T> sendList(SocketRequest request) {
-        SocketResponse response = sendInternal(request);
-        Object payload = response.getPayload();
-        return payload == null ? List.of() : (List<T>) payload;
-    }
-
     private SocketResponse sendInternal(SocketRequest request) {
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(serverHost, serverPort), DEFAULT_CONNECT_TIMEOUT_MS);
             socket.setSoTimeout(DEFAULT_READ_TIMEOUT_MS);
 
-            try (ObjectOutputStream output = new ObjectOutputStream(socket.getOutputStream());
-                 ObjectInputStream input = new ObjectInputStream(socket.getInputStream())) {
-                output.writeObject(request);
+            try (BufferedWriter output = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
+                 BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8))) {
+                output.write(JsonCodec.toJson(request.toMap()));
+                output.newLine();
                 output.flush();
 
-                Object raw = input.readObject();
-                if (!(raw instanceof SocketResponse response)) {
+                String raw = input.readLine();
+                if (raw == null || raw.isBlank()) {
                     throw new IllegalStateException("Phan hoi tu server khong hop le.");
                 }
+
+                Object decoded = JsonCodec.fromJson(raw);
+                if (!(decoded instanceof Map<?, ?> values)) {
+                    throw new IllegalStateException("Phan hoi tu server khong hop le.");
+                }
+
+                SocketResponse response = SocketResponse.fromMap((Map<String, Object>) values);
                 if (!response.isSuccess()) {
                     throw new IllegalStateException(response.getMessage());
                 }
@@ -290,91 +317,116 @@ public class ServerConnection {
         }
     }
 
-    private AppUser mapUser(UserPayload user) {
+    private AppUser mapUser(Map<String, Object> user) {
         return new AppUser(
-                user.id(),
-                user.username(),
-                user.password(),
-                UserRole.valueOf(user.role().toUpperCase(Locale.ROOT)),
-                user.fullName(),
-                user.walletBalance()
+                stringValue(user.get("id")),
+                stringValue(user.get("username")),
+                stringValue(user.get("password")),
+                UserRole.valueOf(stringValue(user.get("role")).toUpperCase(Locale.ROOT)),
+                stringValue(user.get("fullName")),
+                doubleValue(user.get("walletBalance"))
         );
     }
 
-    private List<AppUser> mapUsers(List<UserPayload> users) {
+    private List<AppUser> mapUsers(List<Map<String, Object>> users) {
         return users.stream().map(this::mapUser).toList();
     }
 
-    private AuctionLot mapAuction(AuctionPayload auction) {
+    private AuctionLot mapAuction(Map<String, Object> auction) {
         AuctionLot lot = new AuctionLot(
-                auction.id(),
-                auction.sellerUsername(),
-                auction.title(),
-                auction.category(),
-                auction.description(),
-                auction.startPrice(),
-                auction.endTime(),
-                auction.imageHint()
+                stringValue(auction.get("id")),
+                stringValue(auction.get("sellerUsername")),
+                stringValue(auction.get("title")),
+                stringValue(auction.get("category")),
+                stringValue(auction.get("description")),
+                doubleValue(auction.get("startPrice")),
+                parseTime(auction.get("endTime")),
+                stringValue(auction.get("imageHint"))
         );
-        for (BidPayload bid : auction.bidHistory()) {
-            lot.placeBid(new BidRecord(bid.bidderUsername(), bid.amount(), bid.time()));
+        for (Map<String, Object> bid : castList(auction.get("bidHistory"))) {
+            lot.placeBid(new BidRecord(
+                    stringValue(bid.get("bidderUsername")),
+                    doubleValue(bid.get("amount")),
+                    parseTime(bid.get("time"))
+            ));
         }
-        for (AutoBidPayload rule : auction.autoBidRules()) {
-            lot.addAutoBidRule(new AutoBidRule(rule.bidderUsername(), rule.maxAmount(), rule.incrementStep()));
+        for (Map<String, Object> rule : castList(auction.get("autoBidRules"))) {
+            lot.addAutoBidRule(new AutoBidRule(
+                    stringValue(rule.get("bidderUsername")),
+                    doubleValue(rule.get("maxAmount")),
+                    doubleValue(rule.get("incrementStep"))
+            ));
         }
-        lot.setCancelled(auction.cancelled());
-        lot.setPaid(auction.paid());
-        lot.setAntiSnipeTriggered(auction.antiSnipeTriggered());
-        lot.setCloseNotified(auction.closeNotified());
-        lot.setEndTime(auction.endTime());
+        lot.setCancelled(booleanValue(auction.get("cancelled")));
+        lot.setPaid(booleanValue(auction.get("paid")));
+        lot.setAntiSnipeTriggered(booleanValue(auction.get("antiSnipeTriggered")));
+        lot.setCloseNotified(booleanValue(auction.get("closeNotified")));
+        lot.setEndTime(parseTime(auction.get("endTime")));
         return lot;
     }
 
-    private List<AuctionLot> mapAuctions(List<AuctionPayload> auctions) {
+    private List<AuctionLot> mapAuctions(List<Map<String, Object>> auctions) {
         return auctions.stream().map(this::mapAuction).toList();
     }
 
-    private NotificationItem mapNotification(NotificationPayload payload) {
-        return new NotificationItem(payload.username(), payload.title(), payload.message(), payload.time());
-    }
-
-    private List<NotificationItem> mapNotifications(List<NotificationPayload> payloads) {
-        return payloads.stream().map(this::mapNotification).toList();
-    }
-
-    private PaymentRecord mapPayment(PaymentPayload payload) {
-        return new PaymentRecord(payload.auctionId(), payload.buyerUsername(), payload.sellerUsername(), payload.amount(), payload.paidAt());
-    }
-
-    private List<PaymentRecord> mapPayments(List<PaymentPayload> payloads) {
-        return payloads.stream().map(this::mapPayment).toList();
-    }
-
-    private TransactionRecord mapTransaction(TransactionPayload payload) {
-        return new TransactionRecord(payload.type(), payload.actorUsername(), payload.referenceId(), payload.description(), payload.time());
-    }
-
-    private List<TransactionRecord> mapTransactions(List<TransactionPayload> payloads) {
-        return payloads.stream().map(this::mapTransaction).toList();
-    }
-
-    private TopUpRequestRecord mapTopUpRequest(TopUpRequestPayload payload) {
-        return new TopUpRequestRecord(
-                payload.id(),
-                payload.username(),
-                payload.amount(),
-                payload.bankName(),
-                payload.accountName(),
-                payload.accountNumber(),
-                payload.requestedAt(),
-                payload.status(),
-                payload.approvedAt(),
-                payload.approvedBy(),
-                payload.creditedAt()
+    private NotificationItem mapNotification(Map<String, Object> payload) {
+        return new NotificationItem(
+                stringValue(payload.get("username")),
+                stringValue(payload.get("title")),
+                stringValue(payload.get("message")),
+                parseTime(payload.get("time"))
         );
     }
 
-    private List<TopUpRequestRecord> mapTopUpRequests(List<TopUpRequestPayload> payloads) {
+    private List<NotificationItem> mapNotifications(List<Map<String, Object>> payloads) {
+        return payloads.stream().map(this::mapNotification).toList();
+    }
+
+    private PaymentRecord mapPayment(Map<String, Object> payload) {
+        return new PaymentRecord(
+                stringValue(payload.get("auctionId")),
+                stringValue(payload.get("buyerUsername")),
+                stringValue(payload.get("sellerUsername")),
+                doubleValue(payload.get("amount")),
+                parseTime(payload.get("paidAt"))
+        );
+    }
+
+    private List<PaymentRecord> mapPayments(List<Map<String, Object>> payloads) {
+        return payloads.stream().map(this::mapPayment).toList();
+    }
+
+    private TransactionRecord mapTransaction(Map<String, Object> payload) {
+        return new TransactionRecord(
+                stringValue(payload.get("type")),
+                stringValue(payload.get("actorUsername")),
+                stringValue(payload.get("referenceId")),
+                stringValue(payload.get("description")),
+                parseTime(payload.get("time"))
+        );
+    }
+
+    private List<TransactionRecord> mapTransactions(List<Map<String, Object>> payloads) {
+        return payloads.stream().map(this::mapTransaction).toList();
+    }
+
+    private TopUpRequestRecord mapTopUpRequest(Map<String, Object> payload) {
+        return new TopUpRequestRecord(
+                stringValue(payload.get("id")),
+                stringValue(payload.get("username")),
+                doubleValue(payload.get("amount")),
+                stringValue(payload.get("bankName")),
+                stringValue(payload.get("accountName")),
+                stringValue(payload.get("accountNumber")),
+                parseTime(payload.get("requestedAt")),
+                stringValue(payload.get("status")),
+                parseTime(payload.get("approvedAt")),
+                stringValue(payload.get("approvedBy")),
+                parseTime(payload.get("creditedAt"))
+        );
+    }
+
+    private List<TopUpRequestRecord> mapTopUpRequests(List<Map<String, Object>> payloads) {
         return payloads.stream().map(this::mapTopUpRequest).toList();
     }
 
@@ -396,5 +448,32 @@ public class ServerConnection {
         }
 
         return defaultValue;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> castMap(Object value) {
+        return (Map<String, Object>) value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> castList(Object value) {
+        return value == null ? List.of() : (List<Map<String, Object>>) value;
+    }
+
+    private String stringValue(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private double doubleValue(Object value) {
+        return value instanceof Number number ? number.doubleValue() : 0;
+    }
+
+    private boolean booleanValue(Object value) {
+        return value instanceof Boolean bool && bool;
+    }
+
+    private LocalDateTime parseTime(Object value) {
+        String raw = stringValue(value);
+        return raw == null || raw.isBlank() ? null : LocalDateTime.parse(raw);
     }
 }
