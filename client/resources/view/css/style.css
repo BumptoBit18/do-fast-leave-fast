@@ -112,6 +112,11 @@
     -fx-padding: 12;
 }
 
+.hero-list{
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+}
+
 .mini-panel {
     -fx-background-color: rgba(255, 255, 255, 0.12);
     -fx-background-radius: 12;
