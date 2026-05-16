@@ -4,9 +4,13 @@ import app.model.UserRole;
 import server.ServerMain;
 import server.model.*;
 import server.model.entity.User;
-import shared.socket.*;
+import shared.socket.SocketRequest;
+import shared.socket.SocketResponse;
 
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MessageRouter {
     private final ServerMain server = ServerMain.getInstance();
@@ -78,6 +82,8 @@ public class MessageRouter {
                 default -> SocketResponse.error("Action khong duoc ho tro: " + request.getAction());
             };
         } catch (Exception ex) {
+            System.err.println("Server action failed: " + request.getAction());
+            ex.printStackTrace(System.err);
             return SocketResponse.error(ex.getMessage() == null ? "Loi server." : ex.getMessage());
         }
     }
@@ -112,68 +118,105 @@ public class MessageRouter {
         return user;
     }
 
-    private UserPayload toUserPayload(User user) {
-        return new UserPayload(
-                user.getId(),
-                user.getUsername(),
-                user.getPassword(),
-                UserRole.valueOf(user.getRole()).name(),
-                user.getFullName(),
-                user.getWalletBalance()
+    private Map<String, Object> toUserPayload(User user) {
+        return mapOf(
+                "id", user.getId(),
+                "username", user.getUsername(),
+                "password", user.getPassword(),
+                "role", UserRole.valueOf(user.getRole()).name(),
+                "fullName", user.getFullName(),
+                "walletBalance", user.getWalletBalance()
         );
     }
 
-    private AuctionPayload toAuctionPayload(Auction auction) {
-        List<BidPayload> bids = auction.getBidHistory().stream()
-                .map(bid -> new BidPayload(bid.getActorUsername(), bid.getAmount(), bid.getTime()))
+    private Map<String, Object> toAuctionPayload(Auction auction) {
+        List<Map<String, Object>> bids = auction.getBidHistory().stream()
+                .map(bid -> mapOf(
+                        "bidderUsername", bid.getActorUsername(),
+                        "amount", bid.getAmount(),
+                        "time", toIso(bid.getTime())
+                ))
                 .toList();
-        List<AutoBidPayload> autoBids = auction.getAutoBids().stream()
-                .map(rule -> new AutoBidPayload(rule.getBidderUsername(), rule.getMaxAmount(), rule.getIncrementStep()))
+        List<Map<String, Object>> autoBids = auction.getAutoBids().stream()
+                .map(rule -> mapOf(
+                        "bidderUsername", rule.getBidderUsername(),
+                        "maxAmount", rule.getMaxAmount(),
+                        "incrementStep", rule.getIncrementStep()
+                ))
                 .toList();
-        return new AuctionPayload(
-                auction.getId(),
-                auction.getSellerUsername(),
-                auction.getItem().getName(),
-                auction.getItem().getCategory(),
-                auction.getItem().getDescription(),
-                auction.getItem().getStartingPrice(),
-                auction.getCurrentPrice(),
-                auction.getItem().getEndTime(),
-                auction.getItem().getImageHint(),
-                auction.isCancelled(),
-                auction.isPaid(),
-                auction.isAntiSnipeTriggered(),
-                auction.isCloseNotified(),
-                bids,
-                autoBids
+        return mapOf(
+                "id", auction.getId(),
+                "sellerUsername", auction.getSellerUsername(),
+                "title", auction.getItem().getName(),
+                "category", auction.getItem().getCategory(),
+                "description", auction.getItem().getDescription(),
+                "startPrice", auction.getItem().getStartingPrice(),
+                "currentPrice", auction.getCurrentPrice(),
+                "endTime", toIso(auction.getItem().getEndTime()),
+                "imageHint", auction.getItem().getImageHint(),
+                "cancelled", auction.isCancelled(),
+                "paid", auction.isPaid(),
+                "antiSnipeTriggered", auction.isAntiSnipeTriggered(),
+                "closeNotified", auction.isCloseNotified(),
+                "bidHistory", bids,
+                "autoBidRules", autoBids
         );
     }
 
-    private NotificationPayload toNotificationPayload(NotificationRecord record) {
-        return new NotificationPayload(record.getUsername(), record.getTitle(), record.getMessage(), record.getTime());
-    }
-
-    private PaymentPayload toPaymentPayload(PaymentRecord record) {
-        return new PaymentPayload(record.getAuctionId(), record.getBuyerUsername(), record.getSellerUsername(), record.getAmount(), record.getPaidAt());
-    }
-
-    private TransactionPayload toTransactionPayload(BidTransaction record) {
-        return new TransactionPayload(record.getType(), record.getActorUsername(), record.getReferenceId(), record.getDescription(), record.getTime());
-    }
-
-    private TopUpRequestPayload toTopUpRequestPayload(TopUpRequestRecord request) {
-        return new TopUpRequestPayload(
-                request.getId(),
-                request.getUsername(),
-                request.getAmount(),
-                request.getBankName(),
-                request.getAccountName(),
-                request.getAccountNumber(),
-                request.getRequestedAt(),
-                request.getStatus(),
-                request.getApprovedAt(),
-                request.getApprovedBy(),
-                request.getCreditedAt()
+    private Map<String, Object> toNotificationPayload(NotificationRecord record) {
+        return mapOf(
+                "username", record.getUsername(),
+                "title", record.getTitle(),
+                "message", record.getMessage(),
+                "time", toIso(record.getTime())
         );
+    }
+
+    private Map<String, Object> toPaymentPayload(PaymentRecord record) {
+        return mapOf(
+                "auctionId", record.getAuctionId(),
+                "buyerUsername", record.getBuyerUsername(),
+                "sellerUsername", record.getSellerUsername(),
+                "amount", record.getAmount(),
+                "paidAt", toIso(record.getPaidAt())
+        );
+    }
+
+    private Map<String, Object> toTransactionPayload(BidTransaction record) {
+        return mapOf(
+                "type", record.getType(),
+                "actorUsername", record.getActorUsername(),
+                "referenceId", record.getReferenceId(),
+                "description", record.getDescription(),
+                "time", toIso(record.getTime())
+        );
+    }
+
+    private Map<String, Object> toTopUpRequestPayload(TopUpRequestRecord request) {
+        return mapOf(
+                "id", request.getId(),
+                "username", request.getUsername(),
+                "amount", request.getAmount(),
+                "bankName", request.getBankName(),
+                "accountName", request.getAccountName(),
+                "accountNumber", request.getAccountNumber(),
+                "requestedAt", toIso(request.getRequestedAt()),
+                "status", request.getStatus(),
+                "approvedAt", toIso(request.getApprovedAt()),
+                "approvedBy", request.getApprovedBy(),
+                "creditedAt", toIso(request.getCreditedAt())
+        );
+    }
+
+    private String toIso(LocalDateTime value) {
+        return value == null ? null : value.toString();
+    }
+
+    private Map<String, Object> mapOf(Object... values) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        for (int index = 0; index < values.length; index += 2) {
+            map.put(String.valueOf(values[index]), values[index + 1]);
+        }
+        return map;
     }
 }
