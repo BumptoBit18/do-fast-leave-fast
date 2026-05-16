@@ -58,23 +58,23 @@ public class LoginController {
         hero.setMaxWidth(Double.MAX_VALUE);
         hero.setMinHeight(720);
 
-        Label brand = new Label("AuctionHub");
+        Label brand = new Label("AUCTION APP");
         brand.getStyleClass().add("hero-title");
 
-        Label subtitle = new Label("Ứng dụng đấu giá trực tuyến.");
+        Label subtitle = new Label("Ứng dụng đấu giá trực tuyến chuyên nghiệp, uy tín");
         subtitle.getStyleClass().add("hero-subtitle");
 
         HBox badges = new HBox(8,
-                AppUi.badge("Người mua"),
-                AppUi.badge("Người bán"),
-                AppUi.badge("Admin")
+                AppUi.badge("BIDDER"),
+                AppUi.badge("SELLER"),
+                AppUi.badge("ADMIN")
         );
 
         VBox featureList = new VBox(
                 10,
-                infoRow("Người mua", "Duyệt danh sách, xem chi tiết và đặt giá theo thời gian thực."),
-                infoRow("Người bán", "Tạo phiên đấu giá, quản lý lô đang bán và theo dõi giá."),
-                infoRow("Admin", "Giám sát dữ liệu hệ thống, tài khoản và toàn bộ phiên đấu giá.")
+                infoRow("BIDDER", "Duyệt danh sách, xem chi tiết và đặt giá theo thời gian thực"),
+                infoRow("SELLER", "Tạo phiên đấu giá, quản lý lô đang bán và theo dõi giá"),
+                infoRow("ADMIN", "Giám sát dữ liệu hệ thống, tài khoản và toàn bộ phiên đấu giá")
         );
 
         hero.getChildren().addAll(brand, subtitle, badges, featureList);
