@@ -233,6 +233,7 @@ public class LoginController {
         tag.getStyleClass().add("tag");
 
         Label text = new Label(description);
+        text.getStyleClass().add("hero-list");
         text.setWrapText(true);
 
         VBox body = new VBox(4, tag, text);
