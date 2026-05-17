@@ -7,11 +7,14 @@ import controller.AuctionListController;
 import controller.LoginController;
 import controller.SellerController;
 import controller.WalletController;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ScrollPane;
 import javafx.stage.Stage;
 import network.ServerConnection;
+
+import java.io.IOException;
 
 public class SceneManager {
     private static final double WIDTH = 1280;
@@ -30,32 +33,42 @@ public class SceneManager {
     }
 
     public void showLogin() {
-        setScene(new LoginController(this, serverConnection).getView(), "App Đấu giá | Login");
+        setScene(loadView("/view/fxml/login.fxml", new LoginController(this, serverConnection)), "App Dau gia | Login");
     }
 
     public void showAuctionList() {
-        setScene(new AuctionListController(this, serverConnection).getView(), "App Đấu giá | Marketplace");
+        setScene(loadView("/view/fxml/auction_list.fxml", new AuctionListController(this, serverConnection)), "App Dau gia | Marketplace");
     }
 
     public void showAuctionDetail(AuctionLot auctionLot) {
-        setScene(new AuctionDetailController(this, serverConnection, auctionLot).getView(), "App Đấu giá | Auction Detail");
+        setScene(loadView("/view/fxml/auction_detail.fxml", new AuctionDetailController(this, serverConnection, auctionLot)), "App Dau gia | Auction Detail");
     }
 
     public void showSellerDashboard() {
-        setScene(new SellerController(this, serverConnection).getView(), "App Đấu giá | Seller Studio");
+        setScene(loadView("/view/fxml/seller_dashboard.fxml", new SellerController(this, serverConnection)), "App Dau gia | Seller Studio");
     }
 
     public void showAdminPanel() {
-        setScene(new AdminController(this, serverConnection).getView(), "App Đấu giá | Admin Control");
+        setScene(loadView("/view/fxml/admin_panel.fxml", new AdminController(this, serverConnection)), "App Dau gia | Admin Control");
     }
 
     public void showWallet() {
-        setScene(new WalletController(this, serverConnection).getView(), "App Đấu giá | Wallet");
+        setScene(loadView("/view/fxml/wallet.fxml", new WalletController(this, serverConnection)), "App Dau gia | Wallet");
     }
 
     public void logout() {
         serverConnection.getService().logout();
         showLogin();
+    }
+
+    private Parent loadView(String resourcePath, Object controller) {
+        FXMLLoader loader = new FXMLLoader(SceneManager.class.getResource(resourcePath));
+        loader.setController(controller);
+        try {
+            return loader.load();
+        } catch (IOException ex) {
+            throw new IllegalStateException("Khong the tai giao dien " + resourcePath, ex);
+        }
     }
 
     private void setScene(Parent root, String title) {

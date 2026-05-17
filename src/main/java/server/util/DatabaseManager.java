@@ -51,6 +51,7 @@ public final class DatabaseManager {
                         sort_order integer not null default 0
                     )
                     """);
+            statement.execute("alter table users add column if not exists sort_order integer not null default 0");
             statement.execute("""
                     create table if not exists auctions (
                         id varchar(50) primary key,
@@ -69,6 +70,12 @@ public final class DatabaseManager {
                         sort_order integer not null default 0
                     )
                     """);
+            statement.execute("alter table auctions add column if not exists item_image_hint varchar(255)");
+            statement.execute("alter table auctions add column if not exists cancelled boolean not null default false");
+            statement.execute("alter table auctions add column if not exists paid boolean not null default false");
+            statement.execute("alter table auctions add column if not exists anti_snipe_triggered boolean not null default false");
+            statement.execute("alter table auctions add column if not exists close_notified boolean not null default false");
+            statement.execute("alter table auctions add column if not exists sort_order integer not null default 0");
             statement.execute("""
                     create table if not exists auction_bids (
                         id bigserial primary key,
@@ -82,6 +89,7 @@ public final class DatabaseManager {
                         sort_order integer not null default 0
                     )
                     """);
+            statement.execute("alter table auction_bids add column if not exists sort_order integer not null default 0");
             statement.execute("""
                     create table if not exists auction_auto_bids (
                         id bigserial primary key,
@@ -92,6 +100,7 @@ public final class DatabaseManager {
                         sort_order integer not null default 0
                     )
                     """);
+            statement.execute("alter table auction_auto_bids add column if not exists sort_order integer not null default 0");
             statement.execute("""
                     create table if not exists payments (
                         id bigserial primary key,
@@ -103,6 +112,7 @@ public final class DatabaseManager {
                         sort_order integer not null default 0
                     )
                     """);
+            statement.execute("alter table payments add column if not exists sort_order integer not null default 0");
             statement.execute("""
                     create table if not exists notifications (
                         id bigserial primary key,
@@ -113,6 +123,7 @@ public final class DatabaseManager {
                         sort_order integer not null default 0
                     )
                     """);
+            statement.execute("alter table notifications add column if not exists sort_order integer not null default 0");
             statement.execute("""
                     create table if not exists top_up_requests (
                         id varchar(50) primary key,
@@ -129,6 +140,11 @@ public final class DatabaseManager {
                         sort_order integer not null default 0
                     )
                     """);
+            statement.execute("alter table top_up_requests add column if not exists account_name varchar(255) not null default ''");
+            statement.execute("alter table top_up_requests add column if not exists approved_at timestamp null");
+            statement.execute("alter table top_up_requests add column if not exists approved_by varchar(100) null");
+            statement.execute("alter table top_up_requests add column if not exists credited_at timestamp null");
+            statement.execute("alter table top_up_requests add column if not exists sort_order integer not null default 0");
             statement.execute("""
                     create table if not exists transactions (
                         id bigserial primary key,
@@ -141,6 +157,7 @@ public final class DatabaseManager {
                         sort_order integer not null default 0
                     )
                     """);
+            statement.execute("alter table transactions add column if not exists sort_order integer not null default 0");
         } catch (SQLException ex) {
             throw new IllegalStateException("Khong the khoi tao schema PostgreSQL.", ex);
         }
