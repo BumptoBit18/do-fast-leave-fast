@@ -32,6 +32,15 @@ public class UserController {
     }
 
     public synchronized User register(String username, String password, String fullName, String role) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Username khong duoc de trong.");
+        }
+        if (username.trim().length() < 3) {
+            throw new IllegalArgumentException("Username phai tu 3 ky tu tro len.");
+        }
+        if (!username.matches("^[a-zA-Z0-9_]+$")) {
+            throw new IllegalArgumentException("Username chi duoc chua chu cai, so va dau gach duoi (_).");
+        }
         if (server.usernameExists(username)) {
             throw new IllegalArgumentException("Username da ton tai.");
         }
@@ -69,10 +78,10 @@ public class UserController {
         if (amount <= 0) {
             throw new IllegalArgumentException("So tien nap phai lon hon 0.");
         }
-        server.getUsers().stream()
-                .filter(candidate -> candidate.getUsername().equalsIgnoreCase(username))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Khong tim thay nguoi dung " + username));
+
+        if (server.findUserByUsername(username) == null){
+            throw new IllegalArgumentException("Khong tim thay nguoi dung ten " + username);
+        }
 
         TopUpRequestRecord request = new TopUpRequestRecord(
                 "TOPUP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT),

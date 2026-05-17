@@ -21,6 +21,9 @@ public class AuctionController {
     private static final long ANTI_SNIPE_WINDOW_SECONDS = 300;
     private static final long ANTI_SNIPE_EXTENSION_SECONDS = 180;
 
+    private static final long CHECK_INTERVAL_SECONDS = 10;
+    private LocalDateTime lastExpiredCheck = null;
+
     private final ServerMain server;
 
     public AuctionController(ServerMain server) {
@@ -189,6 +192,15 @@ public class AuctionController {
     }
 
     public synchronized void closeExpiredAuctions() {
+        LocalDateTime now = LocalDateTime.now();
+
+        // Không ktra lại nếu vừa kiểm tra trong vòng 10 giây
+        if (lastExpiredCheck == null ||
+                ChronoUnit.SECONDS.between(lastExpiredCheck, now) < CHECK_INTERVAL_SECONDS
+        ){
+            return; // kiểm tra rồi thì bỏ qua lần này
+        }
+
         List<Auction> auctions = server.getAuctions();
         List<Auction> changedAuctions = new java.util.ArrayList<>();
         for (Auction auction : auctions) {

@@ -25,7 +25,11 @@ public final class ObjectFileStore {
                     return new ArrayList<>((List<T>) value);
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            System.err.println("[ObjectFileStore] Canh bao: Khong the doc file " + path
+                    + " (" + ex.getClass().getSimpleName() + ": " + ex.getMessage() + ")"
+                    + " - Tra ve danh sach rong.");
+
             return new ArrayList<>();
         }
         return new ArrayList<>();

@@ -20,6 +20,11 @@ public final class DatabaseManager {
 
     public static Connection getConnection() throws SQLException {
         initialize();
+        /**
+         * Đặt login timeout = 5s
+         * Nếu sau 5 giây không kết nối được thì ném exception, thread giải phóng, server vẫn chạy được
+         */
+        DriverManager.setLoginTimeout(10);
         return DriverManager.getConnection(config.jdbcUrl(), config.user(), config.password());
     }
 
