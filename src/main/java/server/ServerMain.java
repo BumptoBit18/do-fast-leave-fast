@@ -21,8 +21,10 @@ import server.model.entity.Bidder;
 import server.model.entity.Seller;
 import server.model.entity.User;
 import server.model.item.Item;
+import server.network.ClientSubscriptionRegistry;
 import server.util.DatabaseManager;
 import server.util.ObjectFileStore;
+import shared.socket.RealtimeEvent;
 
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -248,6 +250,7 @@ public class ServerMain {
 
     public synchronized void updateUserWallet(User user) {
         userDAO.updateWalletBalance(user.getUsername(), user.getWalletBalance());
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("USER_UPDATED", user.getUsername(), null));
     }
 
     public synchronized void saveAuctions(List<Auction> values) {
@@ -259,18 +262,22 @@ public class ServerMain {
     public synchronized void addAuction(Auction auction) {
         auctions.add(0, auction);
         auctionDAO.insert(auction);
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("AUCTION_UPDATED", "ALL", auction.getId()));
     }
 
     public synchronized void updateAuction(Auction auction) {
         auctionDAO.updateAuction(auction);
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("AUCTION_UPDATED", "ALL", auction.getId()));
     }
 
     public synchronized void insertAuctionBid(String auctionId, BidTransaction bid) {
         auctionDAO.insertBid(auctionId, bid);
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("AUCTION_UPDATED", "ALL", auctionId));
     }
 
     public synchronized void replaceAuctionAutoBids(Auction auction) {
         auctionDAO.replaceAutoBids(auction.getId(), auction.getAutoBids());
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("AUCTION_UPDATED", auction.getHighestBidder(), auction.getId()));
     }
 
     public synchronized void saveTransactions(List<BidTransaction> values) {
@@ -282,6 +289,7 @@ public class ServerMain {
     public synchronized void addTransaction(BidTransaction transaction) {
         transactions.add(0, transaction);
         bidTransactionDAO.insert(transaction);
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("TRANSACTION_UPDATED", transaction.getActorUsername(), transaction.getReferenceId()));
     }
 
     public synchronized void savePayments(List<PaymentRecord> values) {
@@ -293,6 +301,8 @@ public class ServerMain {
     public synchronized void addPayment(PaymentRecord payment) {
         payments.add(0, payment);
         paymentDAO.insert(payment);
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("PAYMENT_UPDATED", payment.getBuyerUsername(), payment.getAuctionId()));
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("PAYMENT_UPDATED", payment.getSellerUsername(), payment.getAuctionId()));
     }
 
     public synchronized void saveNotifications(List<NotificationRecord> values) {
@@ -304,6 +314,7 @@ public class ServerMain {
     public synchronized void addNotification(NotificationRecord notification) {
         notifications.add(0, notification);
         notificationDAO.insert(notification);
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("NOTIFICATION_UPDATED", notification.getUsername(), null));
     }
 
     public synchronized void saveTopUpRequests(List<TopUpRequestRecord> values) {
@@ -315,14 +326,17 @@ public class ServerMain {
     public synchronized void addTopUpRequest(TopUpRequestRecord request) {
         topUpRequests.add(0, request);
         topUpRequestDAO.insert(request);
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("TOP_UP_UPDATED", request.getUsername(), null));
     }
 
     public synchronized void markTopUpApproved(TopUpRequestRecord request) {
         topUpRequestDAO.markApproved(request.getId(), request.getApprovedBy(), request.getApprovedAt());
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("TOP_UP_UPDATED", request.getUsername(), null));
     }
 
     public synchronized void markTopUpCredited(TopUpRequestRecord request) {
         topUpRequestDAO.markCredited(request.getId(), request.getCreditedAt());
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("TOP_UP_UPDATED", request.getUsername(), null));
     }
 
     public synchronized void persistAll() {
