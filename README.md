@@ -16,6 +16,8 @@ Auction app hoan chinh gom:
 - `client -> socket server -> PostgreSQL`
 - May server chay `server.ServerLauncherMain` va la diem duy nhat truy cap database
 - Cac may client chi ket noi toi `auction.server.host` / `auction.server.port`
+- Giao thuc client-server dung `socket TCP + JSON line protocol`
+- Client giao dien dung JavaFX va FXML, controller theo huong MVC
 - Thu muc `data/*.dat` chi con dung de migrate du lieu cu len database trong lan khoi dong dau tien khi database dang rong
 
 ### Tai khoan mau
@@ -68,22 +70,31 @@ Can cau hinh database bang 1 trong 3 cach tren may server:
 
 ### Real-time update
 
-Da co cap nhat gan real-time o client, nhung theo co che polling:
+Cap nhat du lieu da chuyen sang co che event-driven:
 
-- `AuctionListController`: auto refresh moi 5 giay
-- `WalletController`: auto refresh moi 5 giay
-- `AdminController`: auto refresh dashboard va cac bang theo chu ky
-
-Co nghia la nhieu client cung tro vao 1 server/DB se thay du lieu moi sau chu ky refresh. Hien tai chua co server push/WebSocket.
+- Moi client mo mot kenh subscribe den server bang action `SUBSCRIBE_EVENTS`
+- Server phat `RealtimeEvent` dang JSON moi khi co thay doi quan trong
+- `AuctionList`, `AuctionDetail`, `Seller`, `Wallet`, `Admin` se refresh theo su kien thay vi polling chu ky
+- Bid history chart hien thi truc X theo timestamp cua tung bid
 
 ### Kich ban test thu cong
 
 1. Chay `run-server.ps1` tren may server.
 2. Chay `run-app.ps1 -ServerHost <ip-server>` tren 2 may client khac nhau.
 3. Dang nhap `bidder / bidder123` o client 1, vao chi tiet lot bat ky va dat gia.
-4. O client 2, vao danh sach lot hoac vi de kiem tra du lieu tu dong cap nhat sau chu ky refresh.
+4. O client 2, vao danh sach lot hoac vi de kiem tra du lieu cap nhat ngay sau khi server phat event.
 5. Dang nhap `seller / seller123`, tao mot lot moi trong `Seller Studio`.
 6. Dang nhap `admin / admin`, vao `Admin Control` de xem `Payments`, `Transactions`, `Notifications`.
+
+### Unit test va CI
+
+- Unit test dung JUnit 5 trong `src/test/java`
+- CI workflow nam tai `.github/workflows/java-ci.yml`
+- Lenh local:
+
+```powershell
+mvn test
+```
 
 ### Luu du lieu
 
