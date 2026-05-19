@@ -21,7 +21,7 @@ public class AuctionController {
     private static final long ANTI_SNIPE_WINDOW_SECONDS = 300;
     private static final long ANTI_SNIPE_EXTENSION_SECONDS = 180;
 
-    private static final long CHECK_INTERVAL_SECONDS = 10;
+    private static final long CHECK_INTERVAL_SECONDS = 5;
     private LocalDateTime lastExpiredCheck = null;
 
     private final ServerMain server;
