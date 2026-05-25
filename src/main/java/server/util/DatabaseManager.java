@@ -66,7 +66,7 @@ public final class DatabaseManager {
                         item_description text not null,
                         item_starting_price double precision not null,
                         item_end_time timestamp not null,
-                        item_image_hint varchar(255),
+                        item_image_hint text,
                         cancelled boolean not null default false,
                         paid boolean not null default false,
                         anti_snipe_triggered boolean not null default false,
