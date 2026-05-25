@@ -38,8 +38,8 @@ public class UserController {
         if (username.trim().length() < 3) {
             throw new IllegalArgumentException("Username phai tu 3 ky tu tro len.");
         }
-        if (!username.matches("^[a-zA-Z0-9_]+$")) {
-            throw new IllegalArgumentException("Username chi duoc chua chu cai, so va dau gach duoi (_).");
+        if (!username.matches("^[a-zA-Z0-9 ]*$")) {
+            throw new IllegalArgumentException("Username chi duoc chua chu cai hoac so.");
         }
         if (server.usernameExists(username)) {
             throw new IllegalArgumentException("Username da ton tai.");
