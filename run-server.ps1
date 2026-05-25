@@ -5,7 +5,7 @@ param(
     [string]$DbName = "postgres",
     [string]$DbUser = "",
     [string]$DbPassword = "",
-    [string]$DbSslMode = "require"
+    [string]$DbSslMode = ""
 )
 
 $modulePath = @(
@@ -38,4 +38,34 @@ if (-not (Test-Path $postgresJar)) {
 }
 
 $classPath = "target\classes;$postgresJar"
-java "-Dauction.server.port=$Port" "-Dauction.db.host=$DbHost" "-Dauction.db.port=$DbPort" "-Dauction.db.name=$DbName" "-Dauction.db.user=$DbUser" "-Dauction.db.password=$DbPassword" "-Dauction.db.sslmode=$DbSslMode" --module-path $modulePath --add-modules javafx.controls,javafx.fxml -cp $classPath server.ServerLauncherMain
+$javaArgs = @(
+    "-Dauction.server.port=$Port"
+)
+
+if ($DbHost -and $DbHost.Trim()) {
+    $javaArgs += "-Dauction.db.host=$DbHost"
+}
+if ($DbPort) {
+    $javaArgs += "-Dauction.db.port=$DbPort"
+}
+if ($DbName -and $DbName.Trim() -and $DbHost -and $DbHost.Trim()) {
+    $javaArgs += "-Dauction.db.name=$DbName"
+}
+if ($DbUser -and $DbUser.Trim()) {
+    $javaArgs += "-Dauction.db.user=$DbUser"
+}
+if ($DbPassword -and $DbPassword.Trim()) {
+    $javaArgs += "-Dauction.db.password=$DbPassword"
+}
+if ($DbSslMode -and $DbSslMode.Trim()) {
+    $javaArgs += "-Dauction.db.sslmode=$DbSslMode"
+}
+
+$javaArgs += @(
+    "--module-path", $modulePath,
+    "--add-modules", "javafx.controls,javafx.fxml",
+    "-cp", $classPath,
+    "server.ServerLauncherMain"
+)
+
+& java @javaArgs
