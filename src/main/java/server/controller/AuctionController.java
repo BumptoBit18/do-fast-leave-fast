@@ -101,12 +101,19 @@ public class AuctionController {
 
     public synchronized Auction placeBid(String auctionId, String bidderUsername, double amount) {
         Auction auction = getAuctionById(auctionId);
+        User buyer = findUser(server.getUsers(), bidderUsername);
+
         if (auction.isClosed()) {
             throw new IllegalStateException("Phien dau gia da ket thuc.");
         }
         if (amount < auction.getMinimumBid()) {
             throw new IllegalArgumentException("Gia dat phai tu " + formatCurrency(auction.getMinimumBid()) + " tro len.");
         }
+
+        if (amount > buyer.getWalletBalance()){
+            throw new IllegalStateException("So du khong du de dat gia. So du hien tai chi co: " + formatCurrency(buyer.getWalletBalance()));
+        }
+
 
         List<Auction> auctions = server.getAuctions();
         Auction persistedAuction = findAuctionMutable(auctions, auctionId);
