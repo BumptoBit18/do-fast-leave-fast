@@ -36,11 +36,16 @@ public class WalletController implements MessageListener {
     private static final String BANK_NAME = "MB Bank";
     private static final String ACCOUNT_NAME = "NGUYEN TRONG HUNG";
     private static final String ACCOUNT_NUMBER = "0399858007";
+    private static final Image QR_IMAGE = new Image(QR_IMAGE_URL, true);
 
     private final SceneManager sceneManager;
     private final ServerConnection serverConnection;
     private final AuctionPlatformService service;
     private double lastKnownBalance = Double.NaN;
+    private Label balanceValue;
+    private Label roleValue;
+    private Label userValue;
+    private ListView<String> notificationList;
     @FXML
     private StackPane root;
 
@@ -59,6 +64,7 @@ public class WalletController implements MessageListener {
             }
         });
         root.getChildren().setAll(buildView());
+        refreshWalletView(false);
     }
 
     private Parent buildView() {
@@ -91,14 +97,14 @@ public class WalletController implements MessageListener {
         Button logoutButton = new Button("Dang xuat");
         logoutButton.setOnAction(event -> sceneManager.logout());
 
-        Label balanceValue = new Label();
+        balanceValue = new Label();
         balanceValue.getStyleClass().add("stat-value");
-        Label roleValue = new Label();
+        roleValue = new Label();
         roleValue.getStyleClass().add("muted-label");
-        Label userValue = new Label();
+        userValue = new Label();
         userValue.getStyleClass().add("muted-label");
 
-        ListView<String> notificationList = new ListView<>();
+        notificationList = new ListView<>();
         notificationList.setPrefHeight(180);
 
         VBox accountPanel = AppUi.panelCard(
@@ -130,7 +136,7 @@ public class WalletController implements MessageListener {
                 service.submitTopUpRequest(amount, BANK_NAME, ACCOUNT_NAME, ACCOUNT_NUMBER);
                 service.markCurrentNotificationsSeen();
                 AlertUtil.info("Da gui yeu cau", "Admin se xac nhan de cong tien vao vi.");
-                refreshWalletView(balanceValue, roleValue, userValue, notificationList, false);
+                refreshWalletView(false);
             } catch (NumberFormatException ex) {
                 AlertUtil.error("So tien khong hop le", "Hay nhap so tien hop le.");
             } catch (Exception ex) {
@@ -152,8 +158,7 @@ public class WalletController implements MessageListener {
         HBox body = new HBox(20, accountPanel, transferPanel);
         body.setAlignment(Pos.TOP_LEFT);
 
-        refreshButton.setOnAction(event -> refreshWalletView(balanceValue, roleValue, userValue, notificationList, true));
-        refreshWalletView(balanceValue, roleValue, userValue, notificationList, false);
+        refreshButton.setOnAction(event -> refreshWalletView(true));
 
         shell.setCenter(new VBox(
                 18,
@@ -174,13 +179,10 @@ public class WalletController implements MessageListener {
         return shell;
     }
 
-    private void refreshWalletView(
-            Label balanceValue,
-            Label roleValue,
-            Label userValue,
-            ListView<String> notificationList,
-            boolean showPopupOnApproval
-    ) {
+    private void refreshWalletView(boolean showPopupOnApproval) {
+        if (balanceValue == null || roleValue == null || userValue == null || notificationList == null) {
+            return;
+        }
         AppUser refreshedUser = service.getCurrentUser();
         double previousBalance = lastKnownBalance;
         double currentBalance = refreshedUser.getWalletBalance();
@@ -219,8 +221,7 @@ public class WalletController implements MessageListener {
     }
 
     private Parent buildQrView() {
-        Image qrImage = new Image(QR_IMAGE_URL, true);
-        ImageView imageView = new ImageView(qrImage);
+        ImageView imageView = new ImageView(QR_IMAGE);
         imageView.setFitWidth(340);
         imageView.setPreserveRatio(true);
         imageView.getStyleClass().add("qr-image");
@@ -287,7 +288,7 @@ public class WalletController implements MessageListener {
     @Override
     public void onMessage(RealtimeEvent event) {
         if (root != null) {
-            root.getChildren().setAll(buildView());
+            refreshWalletView(true);
         }
     }
 }
