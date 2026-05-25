@@ -21,6 +21,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -33,6 +35,8 @@ import shared.socket.RealtimeEvent;
 import ui.AppUi;
 import util.SceneManager;
 
+import java.io.ByteArrayInputStream;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -140,6 +144,14 @@ public class AuctionListController implements MessageListener {
         Label previewMeta = new Label();
         previewMeta.getStyleClass().add("muted-label");
 
+        ImageView previewImage = new ImageView();
+        previewImage.setFitWidth(320);
+        previewImage.setFitHeight(180);
+        previewImage.setPreserveRatio(true);
+        previewImage.setSmooth(true);
+        previewImage.setVisible(false);
+        previewImage.setManaged(false);
+
         TextArea previewDescription = new TextArea();
         previewDescription.setEditable(false);
         previewDescription.setWrapText(true);
@@ -169,6 +181,7 @@ public class AuctionListController implements MessageListener {
                 "Tom tat phien da chon va thong bao gan day.",
                 previewTitle,
                 previewMeta,
+                previewImage,
                 previewDescription,
                 bidderSummary,
                 detailButton
@@ -191,6 +204,7 @@ public class AuctionListController implements MessageListener {
                 statsStrip,
                 previewTitle,
                 previewMeta,
+                previewImage,
                 previewDescription
         );
 
@@ -202,7 +216,7 @@ public class AuctionListController implements MessageListener {
             }
         });
         table.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, selected) ->
-                updatePreview(selected, previewTitle, previewMeta, previewDescription)
+                updatePreview(selected, previewTitle, previewMeta, previewImage, previewDescription)
         );
 
         refreshData.run();
@@ -229,10 +243,13 @@ public class AuctionListController implements MessageListener {
         return shell;
     }
 
-    private void updatePreview(AuctionLot selected, Label previewTitle, Label previewMeta, TextArea previewDescription) {
+    private void updatePreview(AuctionLot selected, Label previewTitle, Label previewMeta, ImageView previewImage, TextArea previewDescription) {
         if (selected == null) {
             previewTitle.setText("Chon mot phien dau gia de xem truoc");
             previewMeta.setText("");
+            previewImage.setImage(null);
+            previewImage.setVisible(false);
+            previewImage.setManaged(false);
             previewDescription.clear();
             return;
         }
@@ -245,6 +262,28 @@ public class AuctionListController implements MessageListener {
                         + " | " + selected.getStatusLabel()
         );
         previewDescription.setText(selected.getDescription());
+
+        // Hien thi anh Base64 neu co
+        String imageHint = selected.getImageHint();
+        if (imageHint != null && !imageHint.isBlank()) {
+            try {
+                String base64Data = imageHint.contains(",")
+                        ? imageHint.substring(imageHint.indexOf(',') + 1)
+                        : imageHint;
+                byte[] imageBytes = Base64.getDecoder().decode(base64Data);
+                Image image = new Image(new ByteArrayInputStream(imageBytes));
+                if (!image.isError()) {
+                    previewImage.setImage(image);
+                    previewImage.setVisible(true);
+                    previewImage.setManaged(true);
+                    return;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        previewImage.setImage(null);
+        previewImage.setVisible(false);
+        previewImage.setManaged(false);
     }
 
     private TableView<AuctionLot> buildTable() {
@@ -303,6 +342,7 @@ public class AuctionListController implements MessageListener {
             HBox statsStrip,
             Label previewTitle,
             Label previewMeta,
+            ImageView previewImage,
             TextArea previewDescription
     ) {
         String selectedId = table.getSelectionModel().getSelectedItem() == null
@@ -352,7 +392,7 @@ public class AuctionListController implements MessageListener {
                         AppUi.statCard("Gia cao nhat", service.formatCurrency(hottest), "Phien dau gia dat nhat"),
                         AppUi.statCard("Thong bao", String.valueOf(notifications.size()), "Thong bao moi nhat")
                 );
-                updatePreview(table.getSelectionModel().getSelectedItem(), previewTitle, previewMeta, previewDescription);
+                updatePreview(table.getSelectionModel().getSelectedItem(), previewTitle, previewMeta, previewImage, previewDescription);
             });
         });
     }
