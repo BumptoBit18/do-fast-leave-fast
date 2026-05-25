@@ -9,22 +9,25 @@ public class ServerLauncherMain {
                 System.getenv().getOrDefault("AUCTION_SERVER_PORT", "5050")
         ));
 
-        // Khoi tao DB va load data truoc khi mo cong - neu loi thi bao ro va thoat
-        System.out.println("[Server] Dang ket noi database va khoi tao du lieu tại port " + port);
+        // Khoi tao DB va load du lieu TRUOC khi mo port
+        // Neu DB loi thi bao ro rang va thoat, khong de crash am tham khi co request
+        System.out.println("[Server] Dang ket noi database va khoi tao du lieu...");
         try {
-            ServerMain.getInstance(); // kích hoạt singleton ngay, bắt lỗi DB sớm
-            System.out.println("[Server] Database OK.");
+            ServerMain.getInstance();
+            System.out.println("[Server] Database OK. Du lieu da tai xong.");
         } catch (Exception ex) {
-            System.err.println("[Server] KHONG THE KHOI DONG: " + ex.getMessage());
-            if (ex.getCause() != null) {
-                System.err.println("  Nguyen nhan: " + ex.getCause().getMessage());
+            System.err.println("[Server] KHOI DONG THAT BAI: " + ex.getMessage());
+            Throwable cause = ex.getCause();
+            while (cause != null) {
+                System.err.println("  Nguyen nhan: " + cause.getMessage());
+                cause = cause.getCause();
             }
             System.err.println("[Server] Kiem tra lai config/database.properties.");
             System.exit(1);
         }
 
         SocketAuctionServer.ensureStarted(port);
-        System.out.println("[Server] Dang lang nghe tren cong " + port + ". San sang nhan ket noi.");
+        System.out.println("[Server] San sang, dang lang nghe tren cong " + port + ".");
         Thread.currentThread().join();
     }
 }

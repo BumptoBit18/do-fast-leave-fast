@@ -19,30 +19,33 @@ public class ServerHandler implements Runnable {
     @Override
     public void run() {
         try (Socket client = socket;
-             BufferedReader input = new BufferedReader(new InputStreamReader(client.getInputStream(), StandardCharsets.UTF_8));
+             BufferedReader input  = new BufferedReader(new InputStreamReader(client.getInputStream(),  StandardCharsets.UTF_8));
              BufferedWriter output = new BufferedWriter(new OutputStreamWriter(client.getOutputStream(), StandardCharsets.UTF_8))
         ) {
-            handleRequest(input, output, client);
+            handle(input, output, client);
         } catch (Throwable ex) {
-            System.err.println("[ServerHandler] Loi xu ly socket: " + ex.getClass().getSimpleName() + " - " + ex.getMessage());
+            System.err.println("[ServerHandler] Loi xu ly socket: "
+                    + ex.getClass().getSimpleName() + " - " + ex.getMessage());
             ClientSubscriptionRegistry.unregister(socket);
         }
     }
 
-    private void handleRequest(BufferedReader input, BufferedWriter output, Socket client) throws IOException {
+    private void handle(BufferedReader input, BufferedWriter output, Socket client) throws IOException {
+        // 1. Doc request
         String raw;
         try {
             raw = input.readLine();
         } catch (IOException ex) {
-            writeError(output, "Loi doc yeu cau.");
+            writeError(output, "Loi doc du lieu: " + ex.getMessage());
             return;
         }
 
         if (raw == null || raw.isBlank()) {
-            writeError(output, "Yeu cau khong hop le.");
+            writeError(output, "Yeu cau trong.");
             return;
         }
 
+        // 2. Parse JSON
         Object decoded;
         try {
             decoded = JsonCodec.fromJson(raw);
@@ -52,38 +55,40 @@ public class ServerHandler implements Runnable {
         }
 
         if (!(decoded instanceof Map<?, ?> values)) {
-            writeError(output, "Yeu cau khong hop le.");
+            writeError(output, "Yeu cau khong phai JSON object.");
             return;
         }
 
+        // 3. Parse SocketRequest
         SocketRequest request;
         try {
+            //noinspection unchecked
             request = SocketRequest.fromMap((Map<String, Object>) values);
         } catch (Exception ex) {
-            writeError(output, "Yeu cau khong the xu ly: " + ex.getMessage());
+            writeError(output, "Khong the doc yeu cau: " + ex.getMessage());
             return;
         }
 
+        // 4. Xu ly SUBSCRIBE_EVENTS rieng (giu ket noi song)
         if ("SUBSCRIBE_EVENTS".equalsIgnoreCase(request.getAction())) {
             writeResponse(output, SocketResponse.ok("Subscribed", null));
             ClientSubscriptionRegistry.register(request.getActorUsername(), client, output);
             try {
-                while (input.readLine() != null) {
-                    // Giu ket noi cho den khi client ngat.
-                }
+                //noinspection StatementWithEmptyBody
+                while (input.readLine() != null) { /* giu socket song */ }
             } finally {
                 ClientSubscriptionRegistry.unregister(client);
             }
             return;
         }
 
+        // 5. Route va tra response — bat ca Error lan Exception
         SocketResponse response;
         try {
             response = new MessageRouter().route(request);
         } catch (Throwable ex) {
-            // Bat ca Error (VD: ExceptionInInitializerError khi DB fail) lan Exception
             String msg = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
-            System.err.println("[ServerHandler] Loi xu ly request '" + request.getAction() + "': " + ex.getClass().getSimpleName() + " - " + msg);
+            System.err.println("[ServerHandler] Loi route '" + request.getAction() + "': " + msg);
             writeError(output, "Loi server: " + msg);
             return;
         }
@@ -91,13 +96,15 @@ public class ServerHandler implements Runnable {
         writeResponse(output, response);
     }
 
-    private void writeError(BufferedWriter output, String message) throws IOException {
-        writeResponse(output, SocketResponse.error(message));
-    }
+    // ── helpers ──────────────────────────────────────────────
 
     private void writeResponse(BufferedWriter output, SocketResponse response) throws IOException {
         output.write(JsonCodec.toJson(response.toMap()));
         output.newLine();
         output.flush();
+    }
+
+    private void writeError(BufferedWriter output, String message) throws IOException {
+        writeResponse(output, SocketResponse.error(message));
     }
 }

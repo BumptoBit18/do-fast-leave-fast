@@ -16,6 +16,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 
+
 public class AuctionController {
     private static final double MIN_BID_STEP = 100_000;
     private static final long ANTI_SNIPE_WINDOW_SECONDS = 300;
