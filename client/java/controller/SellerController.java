@@ -271,7 +271,7 @@ public class SellerController implements MessageListener {
                 AppUi.fieldGroup("Ten san pham", "Day la ten chinh hien thi cho nguoi mua trong danh sach dau gia.", itemName),
                 AppUi.fieldGroup("Danh muc", "Chon nhom phu hop de nguoi mua loc san pham de hon.", category),
                 AppUi.fieldGroup("Gia khoi diem", "Nhap muc gia ban dau cho phien dau gia, chua bao gom cac lan dat tiep theo.", startPrice),
-                AppUi.fieldGroup("Thoi luong phien (gio)", "Chon so gio phien dau gia se mo truoc khi tu dong ket thuc.", duration),
+                AppUi.fieldGroup("Thoi luong phien ", "Chon so gio phien dau gia se mo truoc khi tu dong ket thuc.", duration),
                 AppUi.fieldGroup("Hinh anh san pham", "Chon anh tu may tinh de nguoi mua thay duoc hinh anh truc quan.", imageBox),
                 AppUi.fieldGroup("Mo ta chi tiet", "Ghi ro tinh trang san pham, phu kien kem theo va cac luu y can thiet.", description),
                 createButton
