@@ -59,15 +59,16 @@
 }
 
 .hero-title {
-    -fx-font-size: 34px;
-    -fx-font-weight: 800;
+    -fx-font-size: 50px;
+    -fx-font-weight: 500;
     -fx-text-fill: white;
 }
 
 .hero-subtitle {
-    -fx-font-size: 14px;
+    -fx-font-size: 15px;
     -fx-text-fill: rgba(255, 255, 255, 0.85);
     -fx-wrap-text: true;
+    -fx-padding: 0 0 15 0;
 }
 
 .page-title {
@@ -110,6 +111,12 @@
     -fx-background-color: rgba(255, 255, 255, 0.12);
     -fx-background-radius: 12;
     -fx-padding: 12;
+}
+
+.hero-list{
+    -fx-text-fill: white;
+    -fx-font-size: 15px;
+    -fx-padding: 0 5 0 0;
 }
 
 .mini-panel {
