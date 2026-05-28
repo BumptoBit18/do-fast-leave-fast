@@ -48,15 +48,6 @@ public class AdminController implements MessageListener {
     });
     private final AtomicBoolean statsRefreshInProgress = new AtomicBoolean(false);
     private final AtomicBoolean tabRefreshInProgress = new AtomicBoolean(false);
-    private Label subtitleLabel;
-    private HBox statsRow;
-    private TableView<TopUpRequestRecord> topUpTable;
-    private TableView<AuctionLot> auctionTable;
-    private TableView<AppUser> userTable;
-    private TableView<PaymentRecord> paymentTable;
-    private TableView<TransactionRecord> transactionTable;
-    private TableView<NotificationItem> notificationTable;
-    private TabPane tabs;
     @FXML
     private StackPane root;
 
@@ -99,18 +90,18 @@ public class AdminController implements MessageListener {
         Button logoutButton = new Button("Dang xuat");
         logoutButton.setOnAction(event -> sceneManager.logout());
 
-        subtitleLabel = new Label("Dang tai du lieu admin...");
+        Label subtitleLabel = new Label("Dang tai du lieu admin...");
         subtitleLabel.getStyleClass().add("muted-label");
 
-        statsRow = new HBox(14);
+        HBox statsRow = new HBox(14);
         statsRow.getStyleClass().add("stats-strip");
 
-        topUpTable = buildTopUpRequestTable();
-        auctionTable = buildAuctionTable();
-        userTable = buildUserTable();
-        paymentTable = buildPaymentTable();
-        transactionTable = buildTransactionTable();
-        notificationTable = buildNotificationTable();
+        TableView<TopUpRequestRecord> topUpTable = buildTopUpRequestTable();
+        TableView<AuctionLot> auctionTable = buildAuctionTable();
+        TableView<AppUser> userTable = buildUserTable();
+        TableView<PaymentRecord> paymentTable = buildPaymentTable();
+        TableView<TransactionRecord> transactionTable = buildTransactionTable();
+        TableView<NotificationItem> notificationTable = buildNotificationTable();
 
         Label topUpHelper = new Label("Chon mot yeu cau dang PENDING roi bam xac nhan de cong tien vao vi nguoi dung.");
         topUpHelper.getStyleClass().add("muted-label");
@@ -151,7 +142,7 @@ public class AdminController implements MessageListener {
         Tab notificationTab = new Tab("Thong bao", notificationTable);
         notificationTab.setUserData(AdminTab.NOTIFICATION);
 
-        tabs = new TabPane(topUpTab, auctionTab, userTab, paymentTab, transactionTab, notificationTab);
+        TabPane tabs = new TabPane(topUpTab, auctionTab, userTab, paymentTab, transactionTab, notificationTab);
         tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
         tabs.getSelectionModel().selectedItemProperty().addListener((observable, oldTab, newTab) ->
                 refreshActiveTabAsync(newTab, topUpTable, auctionTable, userTable, paymentTable, transactionTable, notificationTable, true)
@@ -455,20 +446,10 @@ public class AdminController implements MessageListener {
 
     @Override
     public void onMessage(RealtimeEvent event) {
-        if (root == null || root.getChildren().isEmpty() || tabs == null) {
+        if (root == null || root.getChildren().isEmpty()) {
             return;
         }
-        refreshStatsAsync(subtitleLabel, statsRow, true);
-        refreshActiveTabAsync(
-                tabs.getSelectionModel().getSelectedItem(),
-                topUpTable,
-                auctionTable,
-                userTable,
-                paymentTable,
-                transactionTable,
-                notificationTable,
-                true
-        );
+        Platform.runLater(() -> root.getChildren().setAll(buildView()));
     }
 
     private enum AdminTab {

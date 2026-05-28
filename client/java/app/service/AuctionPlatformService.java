@@ -19,10 +19,10 @@ import java.util.Locale;
 import java.util.Objects;
 
 public class AuctionPlatformService {
-    private static final long USER_CACHE_MS = Duration.ofSeconds(10).toMillis();
-    private static final long AUCTION_CACHE_MS = Duration.ofSeconds(12).toMillis();
-    private static final long USER_NOTIFICATION_CACHE_MS = Duration.ofSeconds(10).toMillis();
-    private static final long COLLECTION_CACHE_MS = Duration.ofSeconds(12).toMillis();
+    private static final long USER_CACHE_MS = Duration.ofSeconds(2).toMillis();
+    private static final long AUCTION_CACHE_MS = Duration.ofSeconds(3).toMillis();
+    private static final long USER_NOTIFICATION_CACHE_MS = Duration.ofSeconds(3).toMillis();
+    private static final long COLLECTION_CACHE_MS = Duration.ofSeconds(4).toMillis();
 
     private final ServerConnection connection;
     private LocalDateTime lastSeenNotificationTime;

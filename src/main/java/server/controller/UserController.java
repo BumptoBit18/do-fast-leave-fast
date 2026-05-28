@@ -98,9 +98,9 @@ public class UserController {
         );
 
         server.addTopUpRequest(request);
-        appendTransactionSafely("TOP_UP_REQUEST", username, request.getId(), "Gui yeu cau nap tien vao vi", amount);
-        appendNotificationSafely(username, "Yeu cau nap tien da gui", "Yeu cau nap tien cua ban dang cho admin xac nhan.");
-        appendNotificationSafely("admin", "Co yeu cau nap tien moi", username + " vua gui yeu cau nap " + amount + ".");
+        appendTransaction("TOP_UP_REQUEST", username, request.getId(), "Gui yeu cau nap tien vao vi", amount);
+        appendNotification(username, "Yeu cau nap tien da gui", "Yeu cau nap tien cua ban dang cho admin xac nhan.");
+        appendNotification("admin", "Co yeu cau nap tien moi", username + " vua gui yeu cau nap " + amount + ".");
         return request;
     }
 
@@ -117,8 +117,8 @@ public class UserController {
 
         request.approve(adminUsername, LocalDateTime.now());
         server.markTopUpApproved(request);
-        appendTransactionSafely("TOP_UP_APPROVED", adminUsername, request.getId(), "Admin xac nhan yeu cau nap tien", request.getAmount());
-        appendNotificationSafely(request.getUsername(), "Yeu cau da duoc duyet", "Yeu cau nap tien da duoc duyet. He thong se cong tien sau khoang 10 giay.");
+        appendTransaction("TOP_UP_APPROVED", adminUsername, request.getId(), "Admin xac nhan yeu cau nap tien", request.getAmount());
+        appendNotification(request.getUsername(), "Yeu cau da duoc duyet", "Yeu cau nap tien da duoc duyet. He thong se cong tien sau khoang 10 giay.");
 
         return server.getUsers().stream()
                 .filter(candidate -> candidate.getUsername().equalsIgnoreCase(adminUsername))
@@ -155,20 +155,20 @@ public class UserController {
             request.markCredited(now);
             server.updateUserWallet(user);
             server.markTopUpCredited(request);
-            appendTransactionSafely(
+            server.addTransaction(new BidTransaction(
                     "TOP_UP_CREDITED",
                     "SYSTEM",
                     request.getId(),
                     "Cong tien vao vi sau do tre 10 giay",
                     request.getAmount(),
                     now
-            );
-            appendNotificationSafely(
+            ));
+            server.addNotification(new NotificationRecord(
                     request.getUsername(),
                     "Nap tien thanh cong",
                     "So du vi cua ban da duoc cong " + request.getAmount() + " sau khi admin duyet.",
                     now
-            );
+            ));
         }
     }
 
@@ -176,34 +176,8 @@ public class UserController {
         server.addTransaction(new BidTransaction(type, actor, ref, description, amount, LocalDateTime.now()));
     }
 
-    private void appendTransactionSafely(String type, String actor, String ref, String description, double amount) {
-        appendTransactionSafely(type, actor, ref, description, amount, LocalDateTime.now());
-    }
-
-    private void appendTransactionSafely(String type, String actor, String ref, String description, double amount, LocalDateTime time) {
-        try {
-            server.addTransaction(new BidTransaction(type, actor, ref, description, amount, time));
-        } catch (Exception ex) {
-            System.err.println("Khong the ghi transaction phu: " + type + " / " + ref);
-            ex.printStackTrace(System.err);
-        }
-    }
-
     private void appendNotification(String username, String title, String message) {
         server.addNotification(new NotificationRecord(username, title, message, LocalDateTime.now()));
-    }
-
-    private void appendNotificationSafely(String username, String title, String message) {
-        appendNotificationSafely(username, title, message, LocalDateTime.now());
-    }
-
-    private void appendNotificationSafely(String username, String title, String message, LocalDateTime time) {
-        try {
-            server.addNotification(new NotificationRecord(username, title, message, time));
-        } catch (Exception ex) {
-            System.err.println("Khong the ghi notification phu: " + title + " / " + username);
-            ex.printStackTrace(System.err);
-        }
     }
 
     private String buildId() {
