@@ -3,7 +3,8 @@ package controller;
 import app.model.AppUser;
 import app.model.NotificationItem;
 import app.service.AuctionPlatformService;
-import javafx.fxml.FXML;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -20,75 +21,60 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import network.MessageListener;
+import javafx.stage.Window;
+import javafx.util.Duration;
 import network.ServerConnection;
-import shared.socket.RealtimeEvent;
 import ui.AppUi;
 import util.AlertUtil;
 import util.SceneManager;
 
 import java.util.List;
 
-public class WalletController implements MessageListener {
+public class WalletController {
     private static final String QR_IMAGE_URL = "https://i.postimg.cc/hvGBx7Zc/778942ef-f12e-4d94-8ef6-21f06a49242d.jpg";
     private static final String BANK_NAME = "MB Bank";
     private static final String ACCOUNT_NAME = "NGUYEN TRONG HUNG";
     private static final String ACCOUNT_NUMBER = "0399858007";
+    private static final Duration AUTO_REFRESH_INTERVAL = Duration.seconds(6);
 
     private final SceneManager sceneManager;
-    private final ServerConnection serverConnection;
     private final AuctionPlatformService service;
     private double lastKnownBalance = Double.NaN;
-    @FXML
-    private StackPane root;
 
     public WalletController(SceneManager sceneManager, ServerConnection serverConnection) {
         this.sceneManager = sceneManager;
-        this.serverConnection = serverConnection;
         this.service = serverConnection.getService();
     }
 
-    @FXML
-    private void initialize() {
-        serverConnection.addMessageListener(this);
-        root.sceneProperty().addListener((observable, oldScene, newScene) -> {
-            if (newScene == null) {
-                serverConnection.removeMessageListener(this);
-            }
-        });
-        root.getChildren().setAll(buildView());
-    }
-
-    private Parent buildView() {
-        BorderPane shell = new BorderPane();
-        shell.getStyleClass().add("app-shell");
-        shell.setPadding(new Insets(24));
+    public Parent getView() {
+        BorderPane root = new BorderPane();
+        root.getStyleClass().add("app-shell");
+        root.setPadding(new Insets(24));
 
         AppUser currentUser = service.getCurrentUser();
 
-        Button marketButton = new Button("Cho dau gia");
+        Button marketButton = new Button("Chợ đấu giá");
         marketButton.setOnAction(event -> sceneManager.showAuctionList());
 
-        Button sellerButton = new Button("Khu nguoi ban");
+        Button sellerButton = new Button("Khu người bán");
         sellerButton.getStyleClass().add("secondary-button");
         boolean canOpenSeller = currentUser.getRole().name().equals("SELLER") || currentUser.getRole().name().equals("ADMIN");
         sellerButton.setVisible(canOpenSeller);
         sellerButton.setManaged(canOpenSeller);
         sellerButton.setOnAction(event -> sceneManager.showSellerDashboard());
 
-        Button adminButton = new Button("Quan tri he thong");
+        Button adminButton = new Button("Quản trị hệ thống");
         adminButton.getStyleClass().add("secondary-button");
         boolean isAdmin = currentUser.getRole().name().equals("ADMIN");
         adminButton.setVisible(isAdmin);
         adminButton.setManaged(isAdmin);
         adminButton.setOnAction(event -> sceneManager.showAdminPanel());
 
-        Button refreshButton = new Button("Lam moi");
+        Button refreshButton = new Button("Làm mới");
         refreshButton.getStyleClass().add("secondary-button");
 
-        Button logoutButton = new Button("Dang xuat");
+        Button logoutButton = new Button("Đăng xuất");
         logoutButton.setOnAction(event -> sceneManager.logout());
 
         Label balanceValue = new Label();
@@ -102,26 +88,26 @@ public class WalletController implements MessageListener {
         notificationList.setPrefHeight(180);
 
         VBox accountPanel = AppUi.panelCard(
-                "Vi cua ban",
-                "So du duoc cap nhat ngay khi server co thay doi.",
-                AppUi.fieldGroup("So du hien tai", "Cap nhat sau khi admin xac nhan yeu cau nap tien.", balanceValue),
-                AppUi.fieldGroup("Vai tro", "Quyen truy cap hien tai.", roleValue),
-                AppUi.fieldGroup("Nguoi dung", "Chu tai khoan dang dang nhap.", userValue),
-                new Label("Thong bao gan day"),
+                "Ví của bạn",
+                "Số dư sẽ tự cập nhật mỗi 6 giây hoặc ngay khi bạn bấm Làm mới.",
+                AppUi.fieldGroup("Số dư hiện tại", "Cập nhật sau khi admin xác nhận yêu cầu nạp tiền.", balanceValue),
+                AppUi.fieldGroup("Vai trò", "Quyền truy cập hiện tại.", roleValue),
+                AppUi.fieldGroup("Người dùng", "Chủ tài khoản đang đăng nhập.", userValue),
+                new Label("Thông báo gần đây"),
                 notificationList,
                 refreshButton
         );
         accountPanel.setPrefWidth(360);
 
         ComboBox<String> paymentMethodBox = new ComboBox<>();
-        paymentMethodBox.getItems().add("Chuyen khoan ngan hang");
-        paymentMethodBox.setValue("Chuyen khoan ngan hang");
+        paymentMethodBox.getItems().add("Chuyển khoản ngân hàng");
+        paymentMethodBox.setValue("Chuyển khoản ngân hàng");
         paymentMethodBox.setMaxWidth(Double.MAX_VALUE);
 
         TextField amountField = new TextField();
-        amountField.setPromptText("Vi du: 500000");
+        amountField.setPromptText("Ví dụ: 500000");
 
-        Button confirmTopUpButton = new Button("Gui yeu cau xac nhan");
+        Button confirmTopUpButton = new Button("Tôi đã chuyển khoản, gửi yêu cầu xác nhận");
         confirmTopUpButton.getStyleClass().add("primary-button");
         confirmTopUpButton.setMaxWidth(Double.MAX_VALUE);
         confirmTopUpButton.setOnAction(event -> {
@@ -129,20 +115,23 @@ public class WalletController implements MessageListener {
                 double amount = Double.parseDouble(amountField.getText().trim());
                 service.submitTopUpRequest(amount, BANK_NAME, ACCOUNT_NAME, ACCOUNT_NUMBER);
                 service.markCurrentNotificationsSeen();
-                AlertUtil.info("Da gui yeu cau", "Admin se xac nhan de cong tien vao vi.");
+                AlertUtil.info(
+                        "Đã gửi yêu cầu nạp tiền",
+                        "Yêu cầu của bạn đã được gửi tới quản trị viên. Khi admin duyệt, số dư sẽ tự cập nhật và hệ thống sẽ hiển thị thông báo."
+                );
                 refreshWalletView(balanceValue, roleValue, userValue, notificationList, false);
             } catch (NumberFormatException ex) {
-                AlertUtil.error("So tien khong hop le", "Hay nhap so tien hop le.");
+                AlertUtil.error("Số tiền không hợp lệ", "Hãy nhập số tiền hợp lệ trước khi gửi yêu cầu nạp tiền.");
             } catch (Exception ex) {
-                AlertUtil.error("Khong the gui yeu cau", ex.getMessage());
+                AlertUtil.error("Không thể gửi yêu cầu", ex.getMessage());
             }
         });
 
         VBox transferPanel = AppUi.panelCard(
-                "Nap tien vao vi",
-                "Client nhan cap nhat realtime tu server thay cho polling.",
-                AppUi.fieldGroup("Phuong thuc nap", "He thong dang ho tro nap qua chuyen khoan ngan hang.", paymentMethodBox),
-                AppUi.fieldGroup("So tien muon nap", "Nhap dung so tien ban muon chuyen.", amountField),
+                "Nạp tiền vào ví",
+                "Chọn phương thức nạp, quét mã QR, chuyển khoản và gửi yêu cầu để admin xác nhận. Dữ liệu ví tự làm mới mỗi 6 giây.",
+                AppUi.fieldGroup("Phương thức nạp", "Hiện tại hệ thống hỗ trợ nạp qua chuyển khoản ngân hàng.", paymentMethodBox),
+                AppUi.fieldGroup("Số tiền muốn nạp", "Nhập đúng số tiền bạn đã hoặc sẽ chuyển khoản.", amountField),
                 buildQrView(),
                 buildBankInfo(),
                 confirmTopUpButton
@@ -155,14 +144,14 @@ public class WalletController implements MessageListener {
         refreshButton.setOnAction(event -> refreshWalletView(balanceValue, roleValue, userValue, notificationList, true));
         refreshWalletView(balanceValue, roleValue, userValue, notificationList, false);
 
-        shell.setCenter(new VBox(
+        root.setCenter(new VBox(
                 18,
                 AppUi.pageHeader(
-                        "Vi tien",
-                        "Nap tien vao tai khoan",
-                        "Thong tin vi va thong bao duoc dong bo theo su kien tu server.",
-                        AppUi.badge("Realtime"),
-                        AppUi.badge("QR ngan hang"),
+                        "Ví tiền",
+                        "Nạp tiền vào tài khoản",
+                        "Sau khi bạn gửi yêu cầu, quản trị viên phải duyệt thì số dư mới được cộng. Hệ thống tự làm mới mỗi 6 giây.",
+                        AppUi.badge("Chờ duyệt"),
+                        AppUi.badge("QR ngân hàng"),
                         marketButton,
                         sellerButton,
                         adminButton,
@@ -171,7 +160,9 @@ public class WalletController implements MessageListener {
                 ),
                 body
         ));
-        return shell;
+
+        attachAutoRefresh(root, AUTO_REFRESH_INTERVAL, () -> refreshWalletView(balanceValue, roleValue, userValue, notificationList, true));
+        return root;
     }
 
     private void refreshWalletView(
@@ -203,12 +194,12 @@ public class WalletController implements MessageListener {
                     .filter(this::isApprovalNotification)
                     .findFirst()
                     .ifPresentOrElse(
-                            item -> AlertUtil.info("Nap tien thanh cong", item.getMessage()),
+                            item -> AlertUtil.info("Nạp tiền thành công", item.getMessage()),
                             () -> {
                                 if (!Double.isNaN(previousBalance) && currentBalance > previousBalance) {
                                     AlertUtil.info(
-                                            "Nap tien thanh cong",
-                                            "So du vi cua ban da tang len " + service.formatCurrency(currentBalance) + "."
+                                            "Nạp tiền thành công",
+                                            "Số dư ví của bạn đã tăng lên " + service.formatCurrency(currentBalance) + "."
                                     );
                                 }
                             }
@@ -220,12 +211,19 @@ public class WalletController implements MessageListener {
 
     private Parent buildQrView() {
         Image qrImage = new Image(QR_IMAGE_URL, true);
+        if (qrImage.isError()) {
+            return AppUi.panelCard(
+                    "Ảnh QR chưa sẵn sàng",
+                    "Không thể tải ảnh QR từ đường link đã cung cấp. Hãy kiểm tra lại link công khai của ảnh."
+            );
+        }
+
         ImageView imageView = new ImageView(qrImage);
         imageView.setFitWidth(340);
         imageView.setPreserveRatio(true);
         imageView.getStyleClass().add("qr-image");
 
-        Label qrLabel = new Label("Quet ma QR de chuyen khoan");
+        Label qrLabel = new Label("Quét mã QR để chuyển khoản");
         qrLabel.getStyleClass().add("section-title");
 
         VBox qrBox = new VBox(14, qrLabel, imageView);
@@ -236,13 +234,13 @@ public class WalletController implements MessageListener {
 
     private VBox buildBankInfo() {
         VBox infoPanel = AppUi.panelCard(
-                "Thong tin tai khoan nhan tien",
-                "Co the sao chep nhanh thong tin neu khong dung QR."
+                "Thông tin tài khoản nhận tiền",
+                "Bạn có thể sao chép nhanh thông tin để dán vào ứng dụng ngân hàng nếu không dùng mã QR."
         );
         infoPanel.getChildren().addAll(
-                copyField("Ngan hang", BANK_NAME),
-                copyField("Chu tai khoan", ACCOUNT_NAME),
-                copyField("So tai khoan", ACCOUNT_NUMBER)
+                copyField("Ngân hàng", BANK_NAME),
+                copyField("Chủ tài khoản", ACCOUNT_NAME),
+                copyField("Số tài khoản", ACCOUNT_NUMBER)
         );
         return infoPanel;
     }
@@ -256,13 +254,13 @@ public class WalletController implements MessageListener {
 
         VBox textBox = new VBox(4, titleLabel, valueLabel);
 
-        Button copyButton = new Button("Sao chep");
+        Button copyButton = new Button("Sao chép");
         copyButton.getStyleClass().add("secondary-button");
         copyButton.setOnAction(event -> {
             ClipboardContent content = new ClipboardContent();
             content.putString(value);
             Clipboard.getSystemClipboard().setContent(content);
-            AlertUtil.info("Da sao chep", labelText + " da duoc sao chep vao bo nho tam.");
+            AlertUtil.info("Đã sao chép", labelText + " đã được sao chép vào bộ nhớ tạm.");
         });
 
         Region spacer = new Region();
@@ -274,20 +272,45 @@ public class WalletController implements MessageListener {
         return row;
     }
 
+    private void attachAutoRefresh(Parent root, Duration interval, Runnable action) {
+        Timeline timeline = new Timeline(new KeyFrame(interval, event -> action.run()));
+        timeline.setCycleCount(Timeline.INDEFINITE);
+
+        root.sceneProperty().addListener((observable, oldScene, newScene) -> {
+            if (oldScene != null) {
+                timeline.stop();
+            }
+            if (newScene != null) {
+                Window window = newScene.getWindow();
+                if (window != null && window.isShowing()) {
+                    timeline.playFromStart();
+                } else {
+                    newScene.windowProperty().addListener((windowObs, oldWindow, newWindow) -> {
+                        if (newWindow != null) {
+                            newWindow.showingProperty().addListener((showingObs, wasShowing, isShowing) -> {
+                                if (isShowing) {
+                                    timeline.playFromStart();
+                                } else {
+                                    timeline.stop();
+                                }
+                            });
+                            if (newWindow.isShowing()) {
+                                timeline.playFromStart();
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+
     private boolean isApprovalNotification(NotificationItem item) {
         String title = item.getTitle() == null ? "" : item.getTitle().toLowerCase();
         String message = item.getMessage() == null ? "" : item.getMessage().toLowerCase();
-        return title.contains("duyet")
-                || title.contains("nap tien")
-                || message.contains("duyet")
-                || message.contains("so du")
-                || message.contains("cong");
-    }
-
-    @Override
-    public void onMessage(RealtimeEvent event) {
-        if (root != null) {
-            root.getChildren().setAll(buildView());
-        }
+        return title.contains("duyệt")
+                || title.contains("nạp tiền")
+                || message.contains("duyệt")
+                || message.contains("số dư")
+                || message.contains("cộng");
     }
 }

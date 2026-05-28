@@ -17,7 +17,6 @@ class ItemControllerTest {
 
     @Test
     void shouldCreateSpecializedItemForKnownCategory() {
-        LocalDateTime endTime = LocalDateTime.now().plusHours(1);
 
         Item electronics = controller.createItem("electronics", "A1", "Laptop", "Gaming", 1500, endTime, "black");
         Item vehicle = controller.createItem("vehicle", "A2", "Car", "Sedan", 20000, endTime, "white");
@@ -30,7 +29,6 @@ class ItemControllerTest {
 
     @Test
     void shouldCreateGenericItemForUnknownCategory() {
-        LocalDateTime endTime = LocalDateTime.now().plusHours(1);
 
         Item item = controller.createItem("Collectible", "A4", "Coin", "Rare coin", 1200, endTime, "gold");
 
