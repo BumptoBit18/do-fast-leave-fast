@@ -30,6 +30,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Base64;
+import java.util.List;
 import network.MessageListener;
 import network.ServerConnection;
 import shared.socket.RealtimeEvent;
@@ -156,7 +157,7 @@ public class SellerController implements MessageListener {
         endColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getTimeLeftLabel()));
         endColumn.setPrefWidth(140);
 
-        table.getColumns().addAll(titleColumn, priceColumn, statusColumn, endColumn);
+        table.getColumns().setAll(List.of(titleColumn, priceColumn, statusColumn, endColumn));
         return table;
     }
 

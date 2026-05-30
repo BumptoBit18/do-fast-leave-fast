@@ -29,6 +29,7 @@ import network.MessageListener;
 
 import java.io.ByteArrayInputStream;
 import java.util.Base64;
+import java.util.List;
 import network.ServerConnection;
 import shared.socket.RealtimeEvent;
 import ui.AppUi;
@@ -304,7 +305,7 @@ public class AuctionDetailController implements MessageListener {
         timeColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getTime().toString().replace('T', ' ')));
         timeColumn.setPrefWidth(220);
 
-        table.getColumns().addAll(bidderColumn, amountColumn, timeColumn);
+        table.getColumns().setAll(List.of(bidderColumn, amountColumn, timeColumn));
         table.getItems().setAll(auctionLot.getBidHistory());
         return table;
     }
