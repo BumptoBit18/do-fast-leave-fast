@@ -17,11 +17,19 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.util.Base64;
 import network.MessageListener;
 import network.ServerConnection;
 import shared.socket.RealtimeEvent;
@@ -170,8 +178,68 @@ public class SellerController implements MessageListener {
         Spinner<Integer> duration = new Spinner<>(6, 168, 24);
         duration.setEditable(true);
 
-        TextField imageHint = new TextField();
-        imageHint.setPromptText("Vi du: Laptop mau bac, con moi");
+        // --- Image picker ---
+        final String[] selectedImageBase64 = {null};
+
+        ImageView imagePreview = new ImageView();
+        imagePreview.setFitWidth(340);
+        imagePreview.setFitHeight(180);
+        imagePreview.setPreserveRatio(true);
+        imagePreview.setStyle("-fx-background-color: #f0f0f0;");
+        imagePreview.setVisible(false);
+        imagePreview.setManaged(false);
+
+        Label imageLabel = new Label("Chua chon anh");
+        imageLabel.setStyle("-fx-text-fill: #888; -fx-font-size: 12px;");
+
+        Button chooseImageButton = new Button("Chon anh tu may tinh");
+        chooseImageButton.setMaxWidth(Double.MAX_VALUE);
+        chooseImageButton.setOnAction(event -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Chon anh san pham");
+            fileChooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("Anh", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp")
+            );
+            File file = fileChooser.showOpenDialog(root.getScene().getWindow());
+            if (file != null) {
+                try (FileInputStream fis = new FileInputStream(file);
+                     ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                    byte[] buffer = new byte[8192];
+                    int read;
+                    while ((read = fis.read(buffer)) != -1) {
+                        baos.write(buffer, 0, read);
+                    }
+                    String ext = file.getName().toLowerCase();
+                    String mime = ext.endsWith(".png") ? "image/png"
+                            : ext.endsWith(".gif") ? "image/gif"
+                            : "image/jpeg";
+                    selectedImageBase64[0] = "data:" + mime + ";base64,"
+                            + Base64.getEncoder().encodeToString(baos.toByteArray());
+                    Image img = new Image(file.toURI().toString(), true);
+                    imagePreview.setImage(img);
+                    imagePreview.setVisible(true);
+                    imagePreview.setManaged(true);
+                    imageLabel.setText(file.getName());
+                } catch (Exception ex) {
+                    AlertUtil.error("Loi doc anh", "Khong the doc file anh: " + ex.getMessage());
+                }
+            }
+        });
+
+        Button clearImageButton = new Button("Xoa anh");
+        clearImageButton.setOnAction(event -> {
+            selectedImageBase64[0] = null;
+            imagePreview.setImage(null);
+            imagePreview.setVisible(false);
+            imagePreview.setManaged(false);
+            imageLabel.setText("Chua chon anh");
+        });
+
+        HBox imageButtons = new HBox(8, chooseImageButton, clearImageButton);
+        HBox.setHgrow(chooseImageButton, Priority.ALWAYS);
+
+        VBox imageBox = new VBox(6, imageButtons, imageLabel, imagePreview);
+        // --- End image picker ---
 
         TextArea description = new TextArea();
         description.setPromptText("Mo ta chi tiet tinh trang, phu kien, xuat xu...");
@@ -182,6 +250,7 @@ public class SellerController implements MessageListener {
         createButton.setMaxWidth(Double.MAX_VALUE);
         createButton.setOnAction(event -> {
             try {
+                String imageData = selectedImageBase64[0] != null ? selectedImageBase64[0] : "";
                 service.createAuction(
                         service.getCurrentUser().getUsername(),
                         itemName.getText().trim(),
@@ -189,7 +258,7 @@ public class SellerController implements MessageListener {
                         description.getText().trim(),
                         Double.parseDouble(startPrice.getText().trim()),
                         duration.getValue(),
-                        imageHint.getText().trim()
+                        imageData
                 );
                 AlertUtil.info("Tao thanh cong", "Phien dau gia moi da duoc tao.");
                 sceneManager.showSellerDashboard();
@@ -202,8 +271,8 @@ public class SellerController implements MessageListener {
                 AppUi.fieldGroup("Ten san pham", "Day la ten chinh hien thi cho nguoi mua trong danh sach dau gia.", itemName),
                 AppUi.fieldGroup("Danh muc", "Chon nhom phu hop de nguoi mua loc san pham de hon.", category),
                 AppUi.fieldGroup("Gia khoi diem", "Nhap muc gia ban dau cho phien dau gia, chua bao gom cac lan dat tiep theo.", startPrice),
-                AppUi.fieldGroup("Thoi luong phien (gio)", "Chon so gio phien dau gia se mo truoc khi tu dong ket thuc.", duration),
-                AppUi.fieldGroup("Goi y hinh anh", "Mo ta ngan ve hinh anh hoac dien mao san pham de he thong hien thi ngu canh tot hon.", imageHint),
+                AppUi.fieldGroup("Thoi luong phien ", "Chon so gio phien dau gia se mo truoc khi tu dong ket thuc.", duration),
+                AppUi.fieldGroup("Hinh anh san pham", "Chon anh tu may tinh de nguoi mua thay duoc hinh anh truc quan.", imageBox),
                 AppUi.fieldGroup("Mo ta chi tiet", "Ghi ro tinh trang san pham, phu kien kem theo va cac luu y can thiet.", description),
                 createButton
         );

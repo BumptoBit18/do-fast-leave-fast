@@ -62,7 +62,7 @@ public final class DatabaseManager {
                         item_description text not null,
                         item_starting_price double precision not null,
                         item_end_time timestamp not null,
-                        item_image_hint varchar(255),
+                        item_image_hint text,
                         cancelled boolean not null default false,
                         paid boolean not null default false,
                         anti_snipe_triggered boolean not null default false,
@@ -70,7 +70,8 @@ public final class DatabaseManager {
                         sort_order integer not null default 0
                     )
                     """);
-            statement.execute("alter table auctions add column if not exists item_image_hint varchar(255)");
+            statement.execute("alter table auctions add column if not exists item_image_hint text");
+            statement.execute("alter table auctions alter column item_image_hint type text");
             statement.execute("alter table auctions add column if not exists cancelled boolean not null default false");
             statement.execute("alter table auctions add column if not exists paid boolean not null default false");
             statement.execute("alter table auctions add column if not exists anti_snipe_triggered boolean not null default false");

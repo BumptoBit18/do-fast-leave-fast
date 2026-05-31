@@ -21,6 +21,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -33,10 +35,11 @@ import shared.socket.RealtimeEvent;
 import ui.AppUi;
 import util.SceneManager;
 
+import java.io.ByteArrayInputStream;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AuctionListController implements MessageListener {
     private final SceneManager sceneManager;
@@ -48,17 +51,6 @@ public class AuctionListController implements MessageListener {
         thread.setDaemon(true);
         return thread;
     });
-    private final AtomicBoolean refreshInProgress = new AtomicBoolean(false);
-    private TextField searchField;
-    private ComboBox<String> categoryBox;
-    private TableView<AuctionLot> auctionTable;
-    private Label toolbarSubtitle;
-    private ListView<String> notificationList;
-    private Label wonLabel;
-    private HBox statsStrip;
-    private Label previewTitle;
-    private Label previewMeta;
-    private TextArea previewDescription;
     @FXML
     private StackPane root;
 
@@ -85,11 +77,11 @@ public class AuctionListController implements MessageListener {
         shell.setPadding(new Insets(24));
         AppUser currentUser = service.getCurrentUser();
 
-        searchField = new TextField();
+        TextField searchField = new TextField();
         searchField.setPromptText("Tim theo ten, mo ta hoac ten nguoi ban...");
         searchField.setPrefWidth(320);
 
-        categoryBox = new ComboBox<>();
+        ComboBox<String> categoryBox = new ComboBox<>();
         categoryBox.getItems().addAll(service.getCategories());
         categoryBox.setValue(service.getCategories().get(0));
         categoryBox.setPrefWidth(180);
@@ -119,7 +111,7 @@ public class AuctionListController implements MessageListener {
         Button logoutButton = new Button("Dang xuat");
         logoutButton.setOnAction(event -> sceneManager.logout());
 
-        toolbarSubtitle = new Label();
+        Label toolbarSubtitle = new Label();
         toolbarSubtitle.getStyleClass().add("muted-label");
 
         Region toolbarSpacer = new Region();
@@ -143,24 +135,32 @@ public class AuctionListController implements MessageListener {
                 toolbarActions
         );
 
-        auctionTable = buildTable();
-        auctionTable.setItems(visibleAuctions);
+        TableView<AuctionLot> table = buildTable();
+        table.setItems(visibleAuctions);
 
-        previewTitle = new Label("Chon mot phien dau gia de xem truoc");
+        Label previewTitle = new Label("Chon mot phien dau gia de xem truoc");
         previewTitle.getStyleClass().add("card-title");
 
-        previewMeta = new Label();
+        Label previewMeta = new Label();
         previewMeta.getStyleClass().add("muted-label");
 
-        previewDescription = new TextArea();
+        ImageView previewImage = new ImageView();
+        previewImage.setFitWidth(320);
+        previewImage.setFitHeight(180);
+        previewImage.setPreserveRatio(true);
+        previewImage.setSmooth(true);
+        previewImage.setVisible(false);
+        previewImage.setManaged(false);
+
+        TextArea previewDescription = new TextArea();
         previewDescription.setEditable(false);
         previewDescription.setWrapText(true);
         previewDescription.setPrefRowCount(8);
 
-        notificationList = new ListView<>();
+        ListView<String> notificationList = new ListView<>();
         notificationList.setPrefHeight(180);
 
-        wonLabel = new Label();
+        Label wonLabel = new Label();
         wonLabel.getStyleClass().add("muted-label");
         wonLabel.setManaged(currentUser.getRole() == UserRole.BIDDER);
         wonLabel.setVisible(currentUser.getRole() == UserRole.BIDDER);
@@ -169,7 +169,7 @@ public class AuctionListController implements MessageListener {
         detailButton.getStyleClass().add("primary-button");
         detailButton.setMaxWidth(Double.MAX_VALUE);
         detailButton.setOnAction(event -> {
-            AuctionLot selected = auctionTable.getSelectionModel().getSelectedItem();
+            AuctionLot selected = table.getSelectionModel().getSelectedItem();
             if (selected != null) {
                 sceneManager.showAuctionDetail(selected);
             }
@@ -181,40 +181,42 @@ public class AuctionListController implements MessageListener {
                 "Tom tat phien da chon va thong bao gan day.",
                 previewTitle,
                 previewMeta,
+                previewImage,
                 previewDescription,
                 bidderSummary,
                 detailButton
         );
         detailPane.setPrefWidth(360);
 
-        HBox content = new HBox(20, auctionTable, detailPane);
-        HBox.setHgrow(auctionTable, Priority.ALWAYS);
+        HBox content = new HBox(20, table, detailPane);
+        HBox.setHgrow(table, Priority.ALWAYS);
 
-        statsStrip = new HBox(14);
+        HBox statsStrip = new HBox(14);
         statsStrip.getStyleClass().add("stats-strip");
 
         Runnable refreshData = () -> refreshDataAsync(
                 searchField.getText(),
                 categoryBox.getValue(),
-                auctionTable,
+                table,
                 toolbarSubtitle,
                 notificationList,
                 wonLabel,
                 statsStrip,
                 previewTitle,
                 previewMeta,
+                previewImage,
                 previewDescription
         );
 
         applyFilter.setOnAction(event -> refreshData.run());
         refreshButton.setOnAction(event -> refreshData.run());
-        auctionTable.setOnMouseClicked(event -> {
-            if (event.getClickCount() == 2 && auctionTable.getSelectionModel().getSelectedItem() != null) {
-                sceneManager.showAuctionDetail(auctionTable.getSelectionModel().getSelectedItem());
+        table.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2 && table.getSelectionModel().getSelectedItem() != null) {
+                sceneManager.showAuctionDetail(table.getSelectionModel().getSelectedItem());
             }
         });
-        auctionTable.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, selected) ->
-                updatePreview(selected, previewTitle, previewMeta, previewDescription)
+        table.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, selected) ->
+                updatePreview(selected, previewTitle, previewMeta, previewImage, previewDescription)
         );
 
         refreshData.run();
@@ -241,10 +243,13 @@ public class AuctionListController implements MessageListener {
         return shell;
     }
 
-    private void updatePreview(AuctionLot selected, Label previewTitle, Label previewMeta, TextArea previewDescription) {
+    private void updatePreview(AuctionLot selected, Label previewTitle, Label previewMeta, ImageView previewImage, TextArea previewDescription) {
         if (selected == null) {
             previewTitle.setText("Chon mot phien dau gia de xem truoc");
             previewMeta.setText("");
+            previewImage.setImage(null);
+            previewImage.setVisible(false);
+            previewImage.setManaged(false);
             previewDescription.clear();
             return;
         }
@@ -257,6 +262,28 @@ public class AuctionListController implements MessageListener {
                         + " | " + selected.getStatusLabel()
         );
         previewDescription.setText(selected.getDescription());
+
+        // Hien thi anh Base64 neu co
+        String imageHint = selected.getImageHint();
+        if (imageHint != null && !imageHint.isBlank()) {
+            try {
+                String base64Data = imageHint.contains(",")
+                        ? imageHint.substring(imageHint.indexOf(',') + 1)
+                        : imageHint;
+                byte[] imageBytes = Base64.getDecoder().decode(base64Data);
+                Image image = new Image(new ByteArrayInputStream(imageBytes));
+                if (!image.isError()) {
+                    previewImage.setImage(image);
+                    previewImage.setVisible(true);
+                    previewImage.setManaged(true);
+                    return;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        previewImage.setImage(null);
+        previewImage.setVisible(false);
+        previewImage.setManaged(false);
     }
 
     private TableView<AuctionLot> buildTable() {
@@ -299,21 +326,10 @@ public class AuctionListController implements MessageListener {
 
     @Override
     public void onMessage(RealtimeEvent event) {
-        if (event == null || root == null || root.getChildren().isEmpty() || searchField == null || categoryBox == null) {
+        if (event == null || root == null || root.getChildren().isEmpty()) {
             return;
         }
-        refreshDataAsync(
-                searchField.getText(),
-                categoryBox.getValue(),
-                auctionTable,
-                toolbarSubtitle,
-                notificationList,
-                wonLabel,
-                statsStrip,
-                previewTitle,
-                previewMeta,
-                previewDescription
-        );
+        Platform.runLater(() -> root.getChildren().setAll(buildView()));
     }
 
     private void refreshDataAsync(
@@ -326,64 +342,58 @@ public class AuctionListController implements MessageListener {
             HBox statsStrip,
             Label previewTitle,
             Label previewMeta,
+            ImageView previewImage,
             TextArea previewDescription
     ) {
-        if (!refreshInProgress.compareAndSet(false, true)) {
-            return;
-        }
         String selectedId = table.getSelectionModel().getSelectedItem() == null
                 ? null
                 : table.getSelectionModel().getSelectedItem().getId();
 
         refreshExecutor.submit(() -> {
-            try {
-                AppUser refreshedUser = service.getCurrentUser();
-                ObservableList<AuctionLot> auctions = service.getAuctions();
-                List<NotificationItem> notifications = service.getNotificationsForCurrentUser();
-                List<AuctionLot> filtered = service.searchAuctions(keyword, category);
-                int wonCount = refreshedUser.getRole() == UserRole.BIDDER
-                        ? service.getWonAuctionsForBidder(refreshedUser.getUsername()).size()
-                        : 0;
-                long liveCount = auctions.stream().filter(auction -> !auction.isClosed()).count();
-                long bidCount = auctions.stream().mapToLong(auction -> auction.getBidHistory().size()).sum();
-                double hottest = auctions.stream().mapToDouble(AuctionLot::getCurrentPrice).max().orElse(0);
+            AppUser refreshedUser = service.getCurrentUser();
+            ObservableList<AuctionLot> auctions = service.getAuctions();
+            List<NotificationItem> notifications = service.getNotificationsForCurrentUser();
+            List<AuctionLot> filtered = service.searchAuctions(keyword, category);
+            int wonCount = refreshedUser.getRole() == UserRole.BIDDER
+                    ? service.getWonAuctionsForBidder(refreshedUser.getUsername()).size()
+                    : 0;
+            long liveCount = auctions.stream().filter(auction -> !auction.isClosed()).count();
+            long bidCount = auctions.stream().mapToLong(auction -> auction.getBidHistory().size()).sum();
+            double hottest = auctions.stream().mapToDouble(AuctionLot::getCurrentPrice).max().orElse(0);
 
-                Platform.runLater(() -> {
-                    toolbarSubtitle.setText(
-                            "Xin chao " + refreshedUser.getFullName()
-                                    + " | Vai tro: " + refreshedUser.getRole()
-                                    + " | So du: " + service.formatCurrency(refreshedUser.getWalletBalance())
-                    );
-                    visibleAuctions.setAll(filtered);
-                    if (selectedId != null) {
-                        visibleAuctions.stream()
-                                .filter(item -> item.getId().equalsIgnoreCase(selectedId))
-                                .findFirst()
-                                .ifPresent(item -> table.getSelectionModel().select(item));
-                    }
-                    if (!visibleAuctions.isEmpty() && table.getSelectionModel().getSelectedItem() == null) {
-                        table.getSelectionModel().selectFirst();
-                    }
-                    notificationList.getItems().setAll(
-                            notifications.stream()
-                                    .limit(5)
-                                    .map(item -> item.getTitle() + " - " + item.getMessage())
-                                    .toList()
-                    );
-                    if (refreshedUser.getRole() == UserRole.BIDDER) {
-                        wonLabel.setText("So lo da thang: " + wonCount);
-                    }
-                    statsStrip.getChildren().setAll(
-                            AppUi.statCard("Phien dang mo", String.valueOf(liveCount), "So phien dau gia dang dien ra"),
-                            AppUi.statCard("Tong luot gia", String.valueOf(bidCount), "Tong so lan dat gia"),
-                            AppUi.statCard("Gia cao nhat", service.formatCurrency(hottest), "Phien dau gia dat nhat"),
-                            AppUi.statCard("Thong bao", String.valueOf(notifications.size()), "Thong bao moi nhat")
-                    );
-                    updatePreview(table.getSelectionModel().getSelectedItem(), previewTitle, previewMeta, previewDescription);
-                });
-            } finally {
-                refreshInProgress.set(false);
-            }
+            Platform.runLater(() -> {
+                toolbarSubtitle.setText(
+                        "Xin chao " + refreshedUser.getFullName()
+                                + " | Vai tro: " + refreshedUser.getRole()
+                                + " | So du: " + service.formatCurrency(refreshedUser.getWalletBalance())
+                );
+                visibleAuctions.setAll(filtered);
+                if (selectedId != null) {
+                    visibleAuctions.stream()
+                            .filter(item -> item.getId().equalsIgnoreCase(selectedId))
+                            .findFirst()
+                            .ifPresent(item -> table.getSelectionModel().select(item));
+                }
+                if (!visibleAuctions.isEmpty() && table.getSelectionModel().getSelectedItem() == null) {
+                    table.getSelectionModel().selectFirst();
+                }
+                notificationList.getItems().setAll(
+                        notifications.stream()
+                                .limit(5)
+                                .map(item -> item.getTitle() + " - " + item.getMessage())
+                                .toList()
+                );
+                if (refreshedUser.getRole() == UserRole.BIDDER) {
+                    wonLabel.setText("So lo da thang: " + wonCount);
+                }
+                statsStrip.getChildren().setAll(
+                        AppUi.statCard("Phien dang mo", String.valueOf(liveCount), "So phien dau gia dang dien ra"),
+                        AppUi.statCard("Tong luot gia", String.valueOf(bidCount), "Tong so lan dat gia"),
+                        AppUi.statCard("Gia cao nhat", service.formatCurrency(hottest), "Phien dau gia dat nhat"),
+                        AppUi.statCard("Thong bao", String.valueOf(notifications.size()), "Thong bao moi nhat")
+                );
+                updatePreview(table.getSelectionModel().getSelectedItem(), previewTitle, previewMeta, previewImage, previewDescription);
+            });
         });
     }
 }
