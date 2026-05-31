@@ -223,7 +223,6 @@ public class SocketRequest implements Serializable {
         return values;
     }
 
-    @SuppressWarnings("unchecked")
     public static SocketRequest fromMap(Map<String, Object> values) {
         SocketRequest request = new SocketRequest();
         request.setAction((String) values.get("action"));
