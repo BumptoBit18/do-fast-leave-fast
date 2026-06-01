@@ -318,7 +318,7 @@ public class AdminController implements MessageListener {
         requestedAtColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getRequestedAt().toString().replace('T', ' ')));
         requestedAtColumn.setPrefWidth(180);
 
-        table.getColumns().setAll(idColumn, userColumn, amountColumn, bankColumn, accountColumn, statusColumn, requestedAtColumn);
+        table.getColumns().setAll(List.of(idColumn, userColumn, amountColumn, bankColumn, accountColumn, statusColumn, requestedAtColumn));
         return table;
     }
 
@@ -345,7 +345,7 @@ public class AdminController implements MessageListener {
         statusColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getStatusLabel()));
         statusColumn.setPrefWidth(120);
 
-        table.getColumns().setAll(idColumn, titleColumn, sellerColumn, priceColumn, statusColumn);
+        table.getColumns().setAll(List.of(idColumn, titleColumn, sellerColumn, priceColumn, statusColumn));
         return table;
     }
 
@@ -372,7 +372,7 @@ public class AdminController implements MessageListener {
         roleColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getRole().name()));
         roleColumn.setPrefWidth(120);
 
-        table.getColumns().setAll(idColumn, usernameColumn, passwordColumn, nameColumn, roleColumn);
+        table.getColumns().setAll(List.of(idColumn, usernameColumn, passwordColumn, nameColumn, roleColumn));
         return table;
     }
 
@@ -399,7 +399,7 @@ public class AdminController implements MessageListener {
         paidAtColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getPaidAt().toString().replace('T', ' ')));
         paidAtColumn.setPrefWidth(220);
 
-        table.getColumns().setAll(auctionColumn, buyerColumn, sellerColumn, amountColumn, paidAtColumn);
+        table.getColumns().setAll(List.of(auctionColumn, buyerColumn, sellerColumn, amountColumn, paidAtColumn));
         return table;
     }
 
@@ -426,7 +426,7 @@ public class AdminController implements MessageListener {
         timeColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getTime().toString().replace('T', ' ')));
         timeColumn.setPrefWidth(220);
 
-        table.getColumns().setAll(typeColumn, actorColumn, refColumn, descColumn, timeColumn);
+        table.getColumns().setAll(List.of(typeColumn, actorColumn, refColumn, descColumn, timeColumn));
         return table;
     }
 
@@ -449,7 +449,7 @@ public class AdminController implements MessageListener {
         timeColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getTime().toString().replace('T', ' ')));
         timeColumn.setPrefWidth(220);
 
-        table.getColumns().setAll(userColumn, titleColumn, messageColumn, timeColumn);
+        table.getColumns().setAll(List.of(userColumn, titleColumn, messageColumn, timeColumn));
         return table;
     }
 

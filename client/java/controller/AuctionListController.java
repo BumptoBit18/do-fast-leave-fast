@@ -316,12 +316,8 @@ public class AuctionListController implements MessageListener {
         statusColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getStatusLabel()));
         statusColumn.setPrefWidth(120);
 
-        table.getColumns().setAll(titleColumn, categoryColumn, sellerColumn, priceColumn, timeColumn, statusColumn);
+        table.getColumns().setAll(List.of(titleColumn, categoryColumn, sellerColumn, priceColumn, timeColumn, statusColumn));
         return table;
-    }
-
-    private void refreshAuctions(String keyword, String category) {
-        visibleAuctions.setAll(service.searchAuctions(keyword, category));
     }
 
     @Override

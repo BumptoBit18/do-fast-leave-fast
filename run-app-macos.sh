@@ -71,14 +71,14 @@ done
 
 find_javafx_jar() {
   local artifact="$1"
-  local version_dir="$HOME/.m2/repository/org/openjfx/$artifact/$JAVA_FX_VERSION"
-  local generic="$version_dir/$artifact-$JAVA_FX_VERSION.jar"
+  local version_dir="$HOME/.m2/repository/org/openjfx/$artifact/21.0.6"
+  local generic="$version_dir/$artifact-21.0.6.jar"
   local preferred_names=()
 
   if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
-    preferred_names+=("$artifact-$JAVA_FX_VERSION-$PLATFORM-aarch64.jar")
+    preferred_names+=("$artifact-21.0.6-$PLATFORM-aarch64.jar")
   fi
-  preferred_names+=("$artifact-$JAVA_FX_VERSION-$PLATFORM.jar")
+  preferred_names+=("$artifact-21.0.6-$PLATFORM.jar")
 
   for jar_name in "${preferred_names[@]}"; do
     if [[ -f "$version_dir/$jar_name" ]]; then
@@ -98,7 +98,7 @@ find_javafx_jar() {
 JAVA_FX_JARS=()
 for artifact in javafx-base javafx-controls javafx-graphics javafx-fxml; do
   if ! jar_path="$(find_javafx_jar "$artifact")"; then
-    echo "Khong tim thay $artifact $JAVA_FX_VERSION cho macOS trong ~/.m2. Hay tai dependency JavaFX tren may macOS truoc." >&2
+    echo "Khong tim thay $artifact 21.0.6 cho macOS trong ~/.m2. Hay tai dependency JavaFX tren may macOS truoc." >&2
     exit 1
   fi
   JAVA_FX_JARS+=("$jar_path")
@@ -110,17 +110,35 @@ if [[ ! -f "$POSTGRES_JAR" ]]; then
   exit 1
 fi
 
-mkdir -p target/classes
+# Tách biệt thư mục output của Client để tránh ghi đè chéo với Server
+TARGET_DIR="target/client-classes"
+mkdir -p "$TARGET_DIR"
 
-find client/java -name '*.java' -print > sources.txt
-find src/main/java -name '*.java' -print >> sources.txt
+# Tạo danh sách file tạm riêng biệt cho client, kiểm tra thư mục tồn tại trước khi find
+SOURCES_FILE="sources-client.txt"
+> "$SOURCES_FILE"
+if [[ -d "client/java" ]]; then
+  find client/java -name '*.java' -print >> "$SOURCES_FILE"
+fi
+if [[ -d "src/main/java" ]]; then
+  find src/main/java -name '*.java' -print >> "$SOURCES_FILE"
+fi
+
+# Kiểm tra nếu không tìm thấy file mã nguồn nào
+if [[ ! -s "$SOURCES_FILE" ]]; then
+  echo "Loi: Khong tim thay bat ky file .java nao de bien dich!" >&2
+  exit 1
+fi
 
 MODULE_PATH=$(IFS=:; echo "${JAVA_FX_JARS[*]}")
-javac --module-path "$MODULE_PATH" --add-modules javafx.controls,javafx.fxml -d target/classes @sources.txt
+javac --module-path "$MODULE_PATH" --add-modules javafx.controls,javafx.fxml -d "$TARGET_DIR" @"$SOURCES_FILE"
 
-cp -R client/resources/. target/classes/
+# Kiểm tra an toàn trước khi copy tài nguyên giao diện của Client
+if [[ -d "client/resources" ]]; then
+  cp -R client/resources/. "$TARGET_DIR"/
+fi
 
-CLASS_PATH="target/classes:$POSTGRES_JAR"
+CLASS_PATH="$TARGET_DIR:$POSTGRES_JAR"
 JAVA_ARGS=(
   "-Dauction.server.host=$SERVER_HOST"
   "-Dauction.server.port=$PORT"
@@ -129,7 +147,8 @@ JAVA_ARGS=(
 if [[ -n "${DB_HOST// }" ]]; then
   JAVA_ARGS+=("-Dauction.db.host=$DB_HOST")
 fi
-if [[ -n "${DB_PORT// }" && -n "${DB_HOST// }" ]]; then
+# Đồng bộ hóa logic nhận diện DB_PORT độc lập tương tự như bên Server
+if [[ -n "${DB_PORT// }" ]]; then
   JAVA_ARGS+=("-Dauction.db.port=$DB_PORT")
 fi
 if [[ -n "${DB_NAME// }" && -n "${DB_HOST// }" ]]; then
@@ -144,6 +163,9 @@ fi
 if [[ -n "${DB_SSLMODE// }" ]]; then
   JAVA_ARGS+=("-Dauction.db.sslmode=$DB_SSLMODE")
 fi
+
+# Dọn dẹp file tạm trước khi khởi chạy ứng dụng
+rm -f "$SOURCES_FILE"
 
 exec java "${JAVA_ARGS[@]}" \
   --module-path "$MODULE_PATH" \

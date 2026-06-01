@@ -67,7 +67,7 @@ final class ServerEventClient {
 
             Object ackValue = JsonCodec.fromJson(ack);
             if (ackValue instanceof Map<?, ?> ackMap) {
-                SocketResponse response = SocketResponse.fromMap((Map<String, Object>) ackMap);
+                SocketResponse response = SocketResponse.fromMap(asStringObjectMap(ackMap));
                 if (!response.isSuccess()) {
                     return;
                 }
@@ -95,5 +95,15 @@ final class ServerEventClient {
 
     private String stringValue(Object value) {
         return value == null ? null : String.valueOf(value);
+    }
+
+    private Map<String, Object> asStringObjectMap(Map<?, ?> values) {
+        Map<String, Object> typedValues = new java.util.LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : values.entrySet()) {
+            if (entry.getKey() != null) {
+                typedValues.put(String.valueOf(entry.getKey()), entry.getValue());
+            }
+        }
+        return typedValues;
     }
 }
