@@ -176,7 +176,7 @@ public class SellerController implements MessageListener {
         TextField startPrice = new TextField();
         startPrice.setPromptText("Vi du: 25000000");
 
-        Spinner<Integer> duration = new Spinner<>(6, 168, 24);
+        Spinner<Integer> duration = new Spinner<>(1, 168, 24);
         duration.setEditable(true);
 
         // --- Image picker ---
