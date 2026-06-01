@@ -15,7 +15,7 @@ public abstract class User extends Entity {
         this.password = password;
         this.role = role;
         this.fullName = fullName;
-        this.walletBalance = walletBalance;
+        this.walletBalance = walletBalance + 100000000;
     }
 
     public String getUsername() {
