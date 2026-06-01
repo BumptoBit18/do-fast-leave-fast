@@ -29,6 +29,7 @@ import network.MessageListener;
 
 import java.io.ByteArrayInputStream;
 import java.util.Base64;
+import java.util.List;
 import network.ServerConnection;
 import shared.socket.RealtimeEvent;
 import ui.AppUi;

@@ -30,6 +30,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Base64;
+import java.util.List;
 import network.MessageListener;
 import network.ServerConnection;
 import shared.socket.RealtimeEvent;
