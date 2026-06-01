@@ -6,7 +6,6 @@ import shared.socket.RealtimeEvent;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;

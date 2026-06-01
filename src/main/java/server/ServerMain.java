@@ -20,7 +20,6 @@ import server.model.entity.Admin;
 import server.model.entity.Bidder;
 import server.model.entity.Seller;
 import server.model.entity.User;
-import server.model.item.Item;
 import server.network.ClientSubscriptionRegistry;
 import server.util.DatabaseManager;
 import server.util.ObjectFileStore;
@@ -348,7 +347,6 @@ public class ServerMain {
         topUpRequestDAO.saveAll(topUpRequests);
     }
 
-    @SuppressWarnings("unchecked")
     private void migrateLegacyDataIfDatabaseEmpty() {
         if (!users.isEmpty() || !auctions.isEmpty() || !transactions.isEmpty() || !payments.isEmpty() || !notifications.isEmpty() || !topUpRequests.isEmpty()) {
             return;
