@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SERVER_HOST="127.0.0.1"
+SERVER_HOST="localhost"
 PORT=5050
 DB_HOST=""
 DB_PORT=5432

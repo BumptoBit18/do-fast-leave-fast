@@ -17,19 +17,12 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.util.Base64;
 import java.util.List;
 import network.MessageListener;
 import network.ServerConnection;
@@ -83,6 +76,14 @@ public class SellerController implements MessageListener {
         TableView<AuctionLot> sellerTable = buildSellerTable();
         sellerTable.getItems().setAll(service.getAuctionsForSeller(currentUser.getUsername()));
 
+        Button fillFormButton = new Button("Nap vao form");
+        fillFormButton.getStyleClass().add("secondary-button");
+        fillFormButton.setOnAction(event -> {
+            if (sellerTable.getSelectionModel().getSelectedItem() == null) {
+                AlertUtil.error("Chua chon phien", "Hay chon mot phien de sua.");
+            }
+        });
+
         Button cancelButton = new Button("Huy phien da chon");
         cancelButton.getStyleClass().add("secondary-button");
         cancelButton.setOnAction(event -> {
@@ -93,6 +94,23 @@ public class SellerController implements MessageListener {
             }
             service.cancelAuction(selected);
             sceneManager.showSellerDashboard();
+        });
+
+        Button deleteButton = new Button("Xoa han phien da chon");
+        deleteButton.getStyleClass().add("secondary-button");
+        deleteButton.setOnAction(event -> {
+            AuctionLot selected = sellerTable.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                AlertUtil.error("Chua chon phien", "Hay chon mot phien de xoa.");
+                return;
+            }
+            try {
+                service.deleteAuction(selected);
+                AlertUtil.info("Da xoa phien", "Phien dau gia da duoc xoa khoi he thong.");
+                sceneManager.showSellerDashboard();
+            } catch (Exception ex) {
+                AlertUtil.error("Khong the xoa phien", ex.getMessage());
+            }
         });
 
         ListView<String> sellerNotifications = new ListView<>();
@@ -112,11 +130,13 @@ public class SellerController implements MessageListener {
                 sellerTable,
                 new Label("Thong bao gan day"),
                 sellerNotifications,
-                cancelButton
+                fillFormButton,
+                cancelButton,
+                deleteButton
         );
         VBox.setVgrow(sellerTable, Priority.ALWAYS);
 
-        VBox form = buildCreateForm();
+        VBox form = buildCreateForm(sellerTable, fillFormButton);
 
         HBox content = new HBox(20, left, form);
         HBox.setHgrow(left, Priority.ALWAYS);
@@ -161,7 +181,7 @@ public class SellerController implements MessageListener {
         return table;
     }
 
-    private VBox buildCreateForm() {
+    private VBox buildCreateForm(TableView<AuctionLot> sellerTable, Button fillFormButton) {
         VBox form = AppUi.panelCard("Tao phien dau gia moi", "Dien day du thong tin san pham truoc khi dang len he thong.");
         form.setPrefWidth(380);
 
@@ -179,103 +199,99 @@ public class SellerController implements MessageListener {
         Spinner<Integer> duration = new Spinner<>(6, 168, 24);
         duration.setEditable(true);
 
-        // --- Image picker ---
-        final String[] selectedImageBase64 = {null};
-
-        ImageView imagePreview = new ImageView();
-        imagePreview.setFitWidth(340);
-        imagePreview.setFitHeight(180);
-        imagePreview.setPreserveRatio(true);
-        imagePreview.setStyle("-fx-background-color: #f0f0f0;");
-        imagePreview.setVisible(false);
-        imagePreview.setManaged(false);
-
-        Label imageLabel = new Label("Chua chon anh");
-        imageLabel.setStyle("-fx-text-fill: #888; -fx-font-size: 12px;");
-
-        Button chooseImageButton = new Button("Chon anh tu may tinh");
-        chooseImageButton.setMaxWidth(Double.MAX_VALUE);
-        chooseImageButton.setOnAction(event -> {
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Chon anh san pham");
-            fileChooser.getExtensionFilters().addAll(
-                    new FileChooser.ExtensionFilter("Anh", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp")
-            );
-            File file = fileChooser.showOpenDialog(root.getScene().getWindow());
-            if (file != null) {
-                try (FileInputStream fis = new FileInputStream(file);
-                     ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                    byte[] buffer = new byte[8192];
-                    int read;
-                    while ((read = fis.read(buffer)) != -1) {
-                        baos.write(buffer, 0, read);
-                    }
-                    String ext = file.getName().toLowerCase();
-                    String mime = ext.endsWith(".png") ? "image/png"
-                            : ext.endsWith(".gif") ? "image/gif"
-                            : "image/jpeg";
-                    selectedImageBase64[0] = "data:" + mime + ";base64,"
-                            + Base64.getEncoder().encodeToString(baos.toByteArray());
-                    Image img = new Image(file.toURI().toString(), true);
-                    imagePreview.setImage(img);
-                    imagePreview.setVisible(true);
-                    imagePreview.setManaged(true);
-                    imageLabel.setText(file.getName());
-                } catch (Exception ex) {
-                    AlertUtil.error("Loi doc anh", "Khong the doc file anh: " + ex.getMessage());
-                }
-            }
-        });
-
-        Button clearImageButton = new Button("Xoa anh");
-        clearImageButton.setOnAction(event -> {
-            selectedImageBase64[0] = null;
-            imagePreview.setImage(null);
-            imagePreview.setVisible(false);
-            imagePreview.setManaged(false);
-            imageLabel.setText("Chua chon anh");
-        });
-
-        HBox imageButtons = new HBox(8, chooseImageButton, clearImageButton);
-        HBox.setHgrow(chooseImageButton, Priority.ALWAYS);
-
-        VBox imageBox = new VBox(6, imageButtons, imageLabel, imagePreview);
-        // --- End image picker ---
+        TextField imageHint = new TextField();
+        imageHint.setPromptText("Vi du: Anh chup mat truoc, mau den, con moi");
 
         TextArea description = new TextArea();
         description.setPromptText("Mo ta chi tiet tinh trang, phu kien, xuat xu...");
         description.setPrefRowCount(6);
+
+        Label editorState = new Label("Dang tao phien moi");
+        editorState.getStyleClass().add("muted-label");
+
+        final AuctionLot[] editingAuction = {null};
+
+        Runnable resetForm = () -> {
+            editingAuction[0] = null;
+            editorState.setText("Dang tao phien moi");
+            itemName.clear();
+            category.setValue("Electronics");
+            startPrice.clear();
+            duration.getValueFactory().setValue(24);
+            description.clear();
+            imageHint.clear();
+        };
+
+        Runnable loadSelectedAuction = () -> {
+            AuctionLot selected = sellerTable.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                AlertUtil.error("Chua chon phien", "Hay chon mot phien de dua vao form.");
+                return;
+            }
+            editingAuction[0] = selected;
+            editorState.setText("Dang sua phien: " + selected.getId());
+            itemName.setText(selected.getTitle());
+            category.setValue(selected.getCategory());
+            startPrice.setText(String.valueOf((long) selected.getStartPrice()));
+            long hoursLeft = java.time.Duration.between(java.time.LocalDateTime.now(), selected.getEndTime()).toHours();
+            duration.getValueFactory().setValue((int) Math.max(6, Math.min(168, hoursLeft <= 0 ? 24 : hoursLeft)));
+            description.setText(selected.getDescription());
+            imageHint.setText(selected.getImageHint());
+        };
+
+        fillFormButton.setOnAction(event -> loadSelectedAuction.run());
 
         Button createButton = new Button("Dang phien ngay");
         createButton.getStyleClass().add("primary-button");
         createButton.setMaxWidth(Double.MAX_VALUE);
         createButton.setOnAction(event -> {
             try {
-                String imageData = selectedImageBase64[0] != null ? selectedImageBase64[0] : "";
-                service.createAuction(
-                        service.getCurrentUser().getUsername(),
-                        itemName.getText().trim(),
-                        category.getValue(),
-                        description.getText().trim(),
-                        Double.parseDouble(startPrice.getText().trim()),
-                        duration.getValue(),
-                        imageData
-                );
-                AlertUtil.info("Tao thanh cong", "Phien dau gia moi da duoc tao.");
+                String imageDescription = imageHint.getText().trim();
+                if (editingAuction[0] == null) {
+                    service.createAuction(
+                            service.getCurrentUser().getUsername(),
+                            itemName.getText().trim(),
+                            category.getValue(),
+                            description.getText().trim(),
+                            Double.parseDouble(startPrice.getText().trim()),
+                            duration.getValue(),
+                            imageDescription
+                    );
+                    AlertUtil.info("Tao thanh cong", "Phien dau gia moi da duoc tao.");
+                } else {
+                    service.updateAuction(
+                            editingAuction[0],
+                            itemName.getText().trim(),
+                            category.getValue(),
+                            description.getText().trim(),
+                            Double.parseDouble(startPrice.getText().trim()),
+                            duration.getValue(),
+                            imageDescription
+                    );
+                    AlertUtil.info("Cap nhat thanh cong", "Phien dau gia da duoc cap nhat.");
+                }
+                resetForm.run();
                 sceneManager.showSellerDashboard();
             } catch (Exception ex) {
-                AlertUtil.error("Khong tao duoc phien", "Kiem tra du lieu dau vao. " + ex.getMessage());
+                AlertUtil.error("Khong luu duoc phien", "Kiem tra du lieu dau vao. " + ex.getMessage());
             }
         });
 
+        Button resetButton = new Button("Tao phien moi");
+        resetButton.getStyleClass().add("secondary-button");
+        resetButton.setMaxWidth(Double.MAX_VALUE);
+        resetButton.setOnAction(event -> resetForm.run());
+
         form.getChildren().addAll(
+                editorState,
                 AppUi.fieldGroup("Ten san pham", "Day la ten chinh hien thi cho nguoi mua trong danh sach dau gia.", itemName),
                 AppUi.fieldGroup("Danh muc", "Chon nhom phu hop de nguoi mua loc san pham de hon.", category),
                 AppUi.fieldGroup("Gia khoi diem", "Nhap muc gia ban dau cho phien dau gia, chua bao gom cac lan dat tiep theo.", startPrice),
                 AppUi.fieldGroup("Thoi luong phien (gio)", "Chon so gio phien dau gia se mo truoc khi tu dong ket thuc.", duration),
-                AppUi.fieldGroup("Hinh anh san pham", "Chon anh tu may tinh de nguoi mua thay duoc hinh anh truc quan.", imageBox),
+                AppUi.fieldGroup("Mo ta anh san pham", "Mo ta ngan gon goc chup, mau sac hoac dac diem nhan biet cua san pham.", imageHint),
                 AppUi.fieldGroup("Mo ta chi tiet", "Ghi ro tinh trang san pham, phu kien kem theo va cac luu y can thiet.", description),
-                createButton
+                createButton,
+                resetButton
         );
         return form;
     }

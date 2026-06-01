@@ -301,6 +301,19 @@ public class AuctionDAO {
         }
     }
 
+    public void deleteAuction(String auctionId) {
+        DatabaseManager.initialize();
+        String sql = "delete from auctions where lower(id) = lower(?)";
+
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, auctionId);
+            statement.executeUpdate();
+        } catch (Exception ex) {
+            throw new IllegalStateException("Khong the xoa auction khoi PostgreSQL.", ex);
+        }
+    }
+
     public void insertBid(String auctionId, BidTransaction bid) {
         DatabaseManager.initialize();
         String sql = """

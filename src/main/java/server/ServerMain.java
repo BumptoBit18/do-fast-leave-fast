@@ -83,25 +83,26 @@ public class ServerMain {
         return INSTANCE;
     }
 
-    public synchronized void reloadAllFromDisk() {
-        users.clear();
-        users.addAll(userDAO.loadAll());
+    public void reloadAllFromDisk() {
+        synchronized (this) {
+            users.clear();
+            users.addAll(userDAO.loadAll());
 
-        auctions.clear();
-        auctions.addAll(auctionDAO.loadAll());
+            auctions.clear();
+            auctions.addAll(auctionDAO.loadAll());
 
-        transactions.clear();
-        transactions.addAll(bidTransactionDAO.loadAll());
+            transactions.clear();
+            transactions.addAll(bidTransactionDAO.loadAll());
 
-        payments.clear();
-        payments.addAll(paymentDAO.loadAll());
+            payments.clear();
+            payments.addAll(paymentDAO.loadAll());
 
-        notifications.clear();
-        notifications.addAll(notificationDAO.loadAll());
+            notifications.clear();
+            notifications.addAll(notificationDAO.loadAll());
 
-        topUpRequests.clear();
-        topUpRequests.addAll(topUpRequestDAO.loadAll());
-
+            topUpRequests.clear();
+            topUpRequests.addAll(topUpRequestDAO.loadAll());
+        }
         userController.processApprovedTopUpCredits();
     }
 
@@ -130,9 +131,11 @@ public class ServerMain {
         notifications.addAll(notificationDAO.loadAll());
     }
 
-    public synchronized void reloadTopUpRequests() {
-        topUpRequests.clear();
-        topUpRequests.addAll(topUpRequestDAO.loadAll());
+    public void reloadTopUpRequests() {
+        synchronized (this) {
+            topUpRequests.clear();
+            topUpRequests.addAll(topUpRequestDAO.loadAll());
+        }
         userController.processApprovedTopUpCredits();
     }
 
@@ -232,7 +235,7 @@ public class ServerMain {
         return topUpRequestDAO.loadAll();
     }
 
-    public synchronized void processApprovedTopUpCredits() {
+    public void processApprovedTopUpCredits() {
         userController.processApprovedTopUpCredits();
     }
 
@@ -267,6 +270,12 @@ public class ServerMain {
     public synchronized void updateAuction(Auction auction) {
         auctionDAO.updateAuction(auction);
         ClientSubscriptionRegistry.broadcast(new RealtimeEvent("AUCTION_UPDATED", "ALL", auction.getId()));
+    }
+
+    public synchronized void deleteAuction(String auctionId) {
+        auctions.removeIf(auction -> auction.getId().equalsIgnoreCase(auctionId));
+        auctionDAO.deleteAuction(auctionId);
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("AUCTION_UPDATED", "ALL", auctionId));
     }
 
     public synchronized void insertAuctionBid(String auctionId, BidTransaction bid) {

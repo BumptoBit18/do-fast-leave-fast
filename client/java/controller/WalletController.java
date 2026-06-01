@@ -3,6 +3,7 @@ package controller;
 import app.model.AppUser;
 import app.model.NotificationItem;
 import app.service.AuctionPlatformService;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -288,7 +289,7 @@ public class WalletController implements MessageListener {
     @Override
     public void onMessage(RealtimeEvent event) {
         if (root != null) {
-            refreshWalletView(true);
+            Platform.runLater(() -> refreshWalletView(true));
         }
     }
 }

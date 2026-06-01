@@ -7,11 +7,11 @@ import java.time.LocalDateTime;
 public abstract class Item extends Entity {
     private static final long serialVersionUID = 1L;
 
-    private final String name;
-    private final String description;
-    private final double startingPrice;
+    private String name;
+    private String description;
+    private double startingPrice;
     private LocalDateTime endTime;
-    private final String imageHint;
+    private String imageHint;
 
     protected Item(
             String id,
@@ -33,12 +33,24 @@ public abstract class Item extends Entity {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String getDescription() {
         return description;
     }
 
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     public double getStartingPrice() {
         return startingPrice;
+    }
+
+    public void setStartingPrice(double startingPrice) {
+        this.startingPrice = startingPrice;
     }
 
     public LocalDateTime getEndTime() {
@@ -51,6 +63,10 @@ public abstract class Item extends Entity {
 
     public String getImageHint() {
         return imageHint;
+    }
+
+    public void setImageHint(String imageHint) {
+        this.imageHint = imageHint;
     }
 
     public String getCategory() {

@@ -41,7 +41,7 @@ public class ServerConnection implements MessageListener {
     private AppUser currentUser;
 
     public ServerConnection() {
-        this.serverHost = readValue("auction.server.host", "AUCTION_SERVER_HOST", "127.0.0.1");
+        this.serverHost = readValue("auction.server.host", "AUCTION_SERVER_HOST", "localhost");
         this.serverPort = Integer.parseInt(readValue("auction.server.port", "AUCTION_SERVER_PORT", "5050"));
         this.service = new AuctionPlatformService(this);
         this.eventClient = new ServerEventClient(serverHost, serverPort, this);
@@ -128,6 +128,7 @@ public class ServerConnection implements MessageListener {
     public List<AppUser> getUsers() {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_USERS");
+        setActorIfLoggedIn(request);
         return mapUsers(sendObjectList(request));
     }
 
@@ -156,6 +157,21 @@ public class ServerConnection implements MessageListener {
         SocketRequest request = new SocketRequest();
         request.setAction("CREATE_AUCTION");
         request.setUsername(sellerUsername);
+        request.setTitle(title);
+        request.setCategory(category);
+        request.setDescription(description);
+        request.setStartPrice(startPrice);
+        request.setDurationHours(durationHours);
+        request.setImageHint(imageHint);
+        return mapAuction(sendObject(request));
+    }
+
+    public AuctionLot updateAuction(String auctionId, String title, String category, String description, double startPrice, int durationHours, String imageHint) {
+        ensureCurrentUser();
+        SocketRequest request = new SocketRequest();
+        request.setAction("UPDATE_AUCTION");
+        request.setAuctionId(auctionId);
+        request.setActorUsername(currentUser.getUsername());
         request.setTitle(title);
         request.setCategory(category);
         request.setDescription(description);
@@ -215,6 +231,7 @@ public class ServerConnection implements MessageListener {
     public List<TopUpRequestRecord> getTopUpRequests() {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_TOP_UP_REQUESTS");
+        setActorIfLoggedIn(request);
         return mapTopUpRequests(sendObjectList(request));
     }
 
@@ -236,9 +253,19 @@ public class ServerConnection implements MessageListener {
         return mapAuction(sendObject(request));
     }
 
+    public void deleteAuction(String auctionId) {
+        ensureCurrentUser();
+        SocketRequest request = new SocketRequest();
+        request.setAction("DELETE_AUCTION");
+        request.setAuctionId(auctionId);
+        request.setActorUsername(currentUser.getUsername());
+        sendInternal(request);
+    }
+
     public List<NotificationItem> getNotifications() {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_NOTIFICATIONS");
+        setActorIfLoggedIn(request);
         return mapNotifications(sendObjectList(request));
     }
 
@@ -253,12 +280,14 @@ public class ServerConnection implements MessageListener {
     public List<PaymentRecord> getPayments() {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_PAYMENTS");
+        setActorIfLoggedIn(request);
         return mapPayments(sendObjectList(request));
     }
 
     public List<TransactionRecord> getTransactions() {
         SocketRequest request = new SocketRequest();
         request.setAction("GET_TRANSACTIONS");
+        setActorIfLoggedIn(request);
         return mapTransactions(sendObjectList(request));
     }
 
@@ -310,8 +339,8 @@ public class ServerConnection implements MessageListener {
             throw ex;
         } catch (Exception ex) {
             throw new IllegalStateException(
-                    "Khong ket noi duoc toi auction server %s:%d. Hay kiem tra server da chay va client dang tro dung host/port."
-                            .formatted(serverHost, serverPort),
+                    "Khong ket noi duoc toi auction server %s:%d. Chi tiet: %s"
+                            .formatted(serverHost, serverPort, ex.getMessage()),
                     ex
             );
         }
@@ -433,6 +462,12 @@ public class ServerConnection implements MessageListener {
     private void ensureCurrentUser() {
         if (currentUser == null) {
             throw new IllegalStateException("Chua dang nhap.");
+        }
+    }
+
+    private void setActorIfLoggedIn(SocketRequest request) {
+        if (currentUser != null) {
+            request.setActorUsername(currentUser.getUsername());
         }
     }
 

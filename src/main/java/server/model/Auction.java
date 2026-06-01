@@ -14,7 +14,7 @@ public class Auction implements Serializable {
 
     private final String id;
     private final String sellerUsername;
-    private final Item item;
+    private Item item;
     private final List<BidTransaction> bidHistory = new ArrayList<>();
     private final List<AutoBid> autoBids = new ArrayList<>();
     private boolean cancelled;
@@ -38,6 +38,10 @@ public class Auction implements Serializable {
 
     public Item getItem() {
         return item;
+    }
+
+    public void setItem(Item item) {
+        this.item = item;
     }
 
     public List<BidTransaction> getBidHistory() {
@@ -85,7 +89,7 @@ public class Auction implements Serializable {
 
     public String getHighestBidder() {
         BidTransaction highest = getHighestBid();
-        return highest == null ? "Chưa có người đấu giá" : highest.getActorUsername();
+        return highest == null ? "Chua co nguoi dau gia" : highest.getActorUsername();
     }
 
     public String getStatusLabel() {
@@ -103,19 +107,19 @@ public class Auction implements Serializable {
 
     public String getTimeLeftLabel() {
         if (cancelled) {
-            return "Đã hủy";
+            return "Da huy";
         }
         Duration duration = Duration.between(LocalDateTime.now(), item.getEndTime());
         if (duration.isNegative() || duration.isZero()) {
-            return "Đã kết thúc";
+            return "Da ket thuc";
         }
         long days = duration.toDays();
         long hours = duration.minusDays(days).toHours();
         long minutes = duration.minusDays(days).minusHours(hours).toMinutes();
         if (days > 0) {
-            return days + " ngày " + hours + " giờ";
+            return days + " ngay " + hours + " gio";
         }
-        return hours + " giờ " + minutes + " phút";
+        return hours + " gio " + minutes + " phut";
     }
 
     public void addBid(BidTransaction bid) {

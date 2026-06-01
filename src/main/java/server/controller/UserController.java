@@ -1,5 +1,7 @@
 package server.controller;
 
+import server.exception.AuthenticationException;
+import server.exception.AuthorizationException;
 import server.ServerMain;
 import server.model.BidTransaction;
 import server.model.NotificationRecord;
@@ -22,11 +24,11 @@ public class UserController {
 
     public synchronized User login(String username, String password, String role) {
         if (username == null || username.isBlank() || password == null || password.isBlank() || role == null) {
-            throw new IllegalArgumentException("Vui long nhap day du thong tin dang nhap.");
+            throw new AuthenticationException("Vui long nhap day du thong tin dang nhap.");
         }
         User user = server.findUserByCredentials(username, password, role);
         if (user == null) {
-            throw new IllegalArgumentException("Sai username, password hoac role.");
+            throw new AuthenticationException("Sai username, password hoac role.");
         }
         return user;
     }
@@ -96,6 +98,14 @@ public class UserController {
     }
 
     public synchronized User approveTopUpRequest(String requestId, String adminUsername) {
+        User admin = server.getUsers().stream()
+                .filter(candidate -> candidate.getUsername().equalsIgnoreCase(adminUsername))
+                .findFirst()
+                .orElseThrow(() -> new AuthenticationException("Khong tim thay nguoi dung " + adminUsername));
+        if (!"ADMIN".equalsIgnoreCase(admin.getRole())) {
+            throw new AuthorizationException("Chi admin moi duoc phe duyet nap tien.");
+        }
+
         List<TopUpRequestRecord> requests = server.getTopUpRequests();
         TopUpRequestRecord request = requests.stream()
                 .filter(item -> item.getId().equalsIgnoreCase(requestId))
@@ -111,10 +121,7 @@ public class UserController {
         appendTransactionSafely("TOP_UP_APPROVED", adminUsername, request.getId(), "Admin xac nhan yeu cau nap tien", request.getAmount());
         appendNotificationSafely(request.getUsername(), "Yeu cau da duoc duyet", "Yeu cau nap tien da duoc duyet. He thong se cong tien sau khoang 10 giay.");
 
-        return server.getUsers().stream()
-                .filter(candidate -> candidate.getUsername().equalsIgnoreCase(adminUsername))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Khong tim thay admin " + adminUsername));
+        return admin;
     }
 
     public synchronized List<TopUpRequestRecord> getTopUpRequests() {

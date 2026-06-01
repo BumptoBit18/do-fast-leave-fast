@@ -25,26 +25,26 @@ public class BiddingController {
         box.getStyleClass().add("card");
         box.setPadding(new Insets(20));
 
-        Label title = new Label("Đặt giá ngay");
+        Label title = new Label("Dat gia ngay");
         title.getStyleClass().add("section-title");
 
         TextField amountField = new TextField(String.valueOf((long) suggestedValue));
-        amountField.setPromptText("Nhập số tiền bạn muốn đặt");
+        amountField.setPromptText("Nhap so tien ban muon dat");
 
-        Button placeBid = new Button("Xác nhận đặt giá");
+        Button placeBid = new Button("Xac nhan dat gia");
         placeBid.getStyleClass().add("primary-button");
         placeBid.setMaxWidth(Double.MAX_VALUE);
         placeBid.setOnAction(event -> {
             try {
                 bidHandler.accept(Double.parseDouble(amountField.getText().trim()));
             } catch (NumberFormatException ex) {
-                AlertUtil.error("Giá không hợp lệ", "Hãy nhập một số tiền hợp lệ.");
+                AlertUtil.error("Gia khong hop le", "Hay nhap mot so tien hop le.");
             }
         });
 
         box.getChildren().addAll(
                 title,
-                AppUi.fieldGroup("Giá muốn đặt", "Hệ thống đã gợi ý mức tối thiểu hợp lệ. Bạn có thể nhập cao hơn để tăng cơ hội dẫn đầu.", amountField),
+                AppUi.fieldGroup("Gia muon dat", "He thong da goi y muc toi thieu hop le. Ban co the nhap cao hon de tang co hoi dan dau.", amountField),
                 placeBid
         );
         return box;

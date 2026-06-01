@@ -1,8 +1,8 @@
 package controller;
 
 import app.model.UserRole;
-import javafx.fxml.FXML;
 import javafx.application.Platform;
+import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -61,7 +61,7 @@ public class LoginController {
         Label brand = new Label("AUCTION APP");
         brand.getStyleClass().add("hero-title");
 
-        Label subtitle = new Label("Ứng dụng đấu giá trực tuyến chuyên nghiệp, uy tín");
+        Label subtitle = new Label("Ung dung dau gia truc tuyen chuyen nghiep, uy tin");
         subtitle.getStyleClass().add("hero-subtitle");
 
         HBox badges = new HBox(8,
@@ -72,9 +72,9 @@ public class LoginController {
 
         VBox featureList = new VBox(
                 10,
-                infoRow("BIDDER", "Duyệt danh sách, xem chi tiết và đặt giá theo thời gian thực"),
-                infoRow("SELLER", "Tạo phiên đấu giá, quản lý lô đang bán và theo dõi giá"),
-                infoRow("ADMIN", "Giám sát dữ liệu hệ thống, tài khoản và toàn bộ phiên đấu giá")
+                infoRow("BIDDER", "Duyet danh sach, xem chi tiet va dat gia theo thoi gian thuc"),
+                infoRow("SELLER", "Tao phien dau gia, quan ly lo dang ban va theo doi gia"),
+                infoRow("ADMIN", "Giam sat du lieu he thong, tai khoan va toan bo phien dau gia")
         );
 
         hero.getChildren().addAll(brand, subtitle, badges, featureList);
@@ -89,45 +89,45 @@ public class LoginController {
         VBox loginForm = new VBox(14);
         loginForm.setPadding(new Insets(28));
 
-        Label loginTitle = new Label("Đăng nhập hệ thống");
+        Label loginTitle = new Label("Dang nhap he thong");
         loginTitle.getStyleClass().add("section-title");
 
         TextField usernameField = new TextField();
-        usernameField.setPromptText("Ví dụ: bidder");
+        usernameField.setPromptText("Vi du: bidder");
 
         PasswordField passwordField = new PasswordField();
-        passwordField.setPromptText("Nhập mật khẩu");
+        passwordField.setPromptText("Nhap mat khau");
 
         ComboBox<UserRole> roleBox = new ComboBox<>();
         roleBox.getItems().addAll(UserRole.BIDDER, UserRole.SELLER, UserRole.ADMIN);
         roleBox.setValue(UserRole.BIDDER);
         roleBox.setMaxWidth(Double.MAX_VALUE);
 
-        Button loginButton = new Button("Đăng nhập");
+        Button loginButton = new Button("Dang nhap");
         loginButton.getStyleClass().add("primary-button");
         loginButton.setMaxWidth(Double.MAX_VALUE);
 
         VBox registerForm = new VBox(14);
         registerForm.setPadding(new Insets(28));
 
-        Label registerTitle = new Label("Tạo tài khoản mới");
+        Label registerTitle = new Label("Tao tai khoan moi");
         registerTitle.getStyleClass().add("section-title");
 
         TextField fullNameField = new TextField();
-        fullNameField.setPromptText("Ví dụ: Nguyễn Văn A");
+        fullNameField.setPromptText("Vi du: Nguyen Van A");
 
         TextField registerUserField = new TextField();
-        registerUserField.setPromptText("Tạo tên đăng nhập mới");
+        registerUserField.setPromptText("Tao ten dang nhap moi");
 
         PasswordField registerPasswordField = new PasswordField();
-        registerPasswordField.setPromptText("Ít nhất 6 ký tự");
+        registerPasswordField.setPromptText("It nhat 6 ky tu");
 
         ComboBox<UserRole> registerRoleBox = new ComboBox<>();
         registerRoleBox.getItems().addAll(UserRole.BIDDER, UserRole.SELLER);
         registerRoleBox.setValue(UserRole.BIDDER);
         registerRoleBox.setMaxWidth(Double.MAX_VALUE);
 
-        Button registerButton = new Button("Đăng ký");
+        Button registerButton = new Button("Dang ky");
         registerButton.getStyleClass().add("primary-button");
         registerButton.setMaxWidth(Double.MAX_VALUE);
 
@@ -151,7 +151,7 @@ public class LoginController {
                 } catch (Exception ex) {
                     Platform.runLater(() -> {
                         setBusy(false, loginButton, registerButton);
-                        AlertUtil.error("Đăng nhập thất bại", ex.getMessage());
+                        AlertUtil.error("Dang nhap that bai", ex.getMessage());
                     });
                 }
             });
@@ -169,7 +169,7 @@ public class LoginController {
                     );
                     Platform.runLater(() -> {
                         setBusy(false, loginButton, registerButton);
-                        AlertUtil.info("Đăng ký thành công", "Tài khoản mới đã được tạo. Bạn có thể đăng nhập ngay.");
+                        AlertUtil.info("Dang ky thanh cong", "Tai khoan moi da duoc tao. Ban co the dang nhap ngay.");
                         usernameField.setText(registerUserField.getText().trim());
                         passwordField.setText(registerPasswordField.getText());
                         roleBox.setValue(registerRoleBox.getValue());
@@ -178,7 +178,7 @@ public class LoginController {
                 } catch (Exception ex) {
                     Platform.runLater(() -> {
                         setBusy(false, loginButton, registerButton);
-                        AlertUtil.error("Đăng ký thất bại", ex.getMessage());
+                        AlertUtil.error("Dang ky that bai", ex.getMessage());
                     });
                 }
             });
@@ -186,24 +186,24 @@ public class LoginController {
 
         loginForm.getChildren().addAll(
                 loginTitle,
-                AppUi.fieldGroup("Tên đăng nhập", "Dùng tên tài khoản đã được cấp hoặc đã đăng ký trước đó.", usernameField),
-                AppUi.fieldGroup("Mật khẩu", "Mật khẩu phải đúng với tài khoản tương ứng trong hệ thống.", passwordField),
-                AppUi.fieldGroup("Loại tài khoản", "Chọn đúng vai trò để vào khu vực Người mua, Người bán hoặc Quản trị.", roleBox),
+                AppUi.fieldGroup("Ten dang nhap", "Dung ten tai khoan da duoc cap hoac da dang ky truoc do.", usernameField),
+                AppUi.fieldGroup("Mat khau", "Mat khau phai dung voi tai khoan tuong ung trong he thong.", passwordField),
+                AppUi.fieldGroup("Loai tai khoan", "Chon dung vai tro de vao khu vuc nguoi mua, nguoi ban hoac quan tri.", roleBox),
                 loginButton
         );
 
         registerForm.getChildren().addAll(
                 registerTitle,
-                AppUi.fieldGroup("Họ và tên", "Nhập họ tên đầy đủ để hệ thống hiển thị đúng thông tin người dùng.", fullNameField),
-                AppUi.fieldGroup("Tên đăng nhập mới", "Tên này sẽ dùng để đăng nhập sau này và không được trùng với người khác.", registerUserField),
-                AppUi.fieldGroup("Mật khẩu", "Mật khẩu nên dễ nhớ với bạn nhưng đủ an toàn, tối thiểu 6 ký tự.", registerPasswordField),
-                AppUi.fieldGroup("Loại tài khoản", "Người mua dùng để đấu giá, Người bán dùng để đăng lô đấu giá.", registerRoleBox),
+                AppUi.fieldGroup("Ho va ten", "Nhap ho ten day du de he thong hien thi dung thong tin nguoi dung.", fullNameField),
+                AppUi.fieldGroup("Ten dang nhap moi", "Ten nay se dung de dang nhap sau nay va khong duoc trung voi nguoi khac.", registerUserField),
+                AppUi.fieldGroup("Mat khau", "Mat khau nen de nho voi ban nhung du an toan, toi thieu 6 ky tu.", registerPasswordField),
+                AppUi.fieldGroup("Loai tai khoan", "Nguoi mua dung de dau gia, nguoi ban dung de dang lo dau gia.", registerRoleBox),
                 registerButton
         );
 
         form.getTabs().addAll(
-                new Tab("Đăng nhập", loginForm),
-                new Tab("Đăng ký", registerForm)
+                new Tab("Dang nhap", loginForm),
+                new Tab("Dang ky", registerForm)
         );
 
         HBox content = new HBox(28, hero, form);
@@ -224,8 +224,8 @@ public class LoginController {
     private void setBusy(boolean busy, Button loginButton, Button registerButton) {
         loginButton.setDisable(busy);
         registerButton.setDisable(busy);
-        loginButton.setText(busy ? "Đang xử lý..." : "Đăng nhập");
-        registerButton.setText(busy ? "Đang xử lý..." : "Đăng ký");
+        loginButton.setText(busy ? "Dang xu ly..." : "Dang nhap");
+        registerButton.setText(busy ? "Dang xu ly..." : "Dang ky");
     }
 
     private HBox infoRow(String title, String description) {

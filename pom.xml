@@ -68,6 +68,18 @@
                             </sources>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>add-extra-test-sources</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>server/src/test</source>
+                            </sources>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>

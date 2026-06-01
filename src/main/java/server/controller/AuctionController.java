@@ -1,5 +1,8 @@
 package server.controller;
 
+import server.exception.AuctionClosedException;
+import server.exception.InvalidBidException;
+import server.exception.AuthorizationException;
 import server.ServerMain;
 import server.model.Auction;
 import server.model.AutoBid;
@@ -95,13 +98,57 @@ public class AuctionController {
         return auction;
     }
 
+    public synchronized Auction updateAuction(
+            String auctionId,
+            String actorUsername,
+            String title,
+            String category,
+            String description,
+            double startPrice,
+            int durationHours,
+            String imageHint
+    ) {
+        List<Auction> auctions = server.getAuctions();
+        Auction auction = findAuctionMutable(auctions, auctionId);
+        ensureSellerOwnsAuction(auction, actorUsername);
+        ensureAuctionEditable(auction);
+
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("Ten san pham khong duoc de trong.");
+        }
+        if (description == null || description.isBlank()) {
+            throw new IllegalArgumentException("Mo ta san pham khong duoc de trong.");
+        }
+        if (startPrice <= 0) {
+            throw new IllegalArgumentException("Gia khoi diem phai lon hon 0.");
+        }
+        if (durationHours <= 0) {
+            throw new IllegalArgumentException("Thoi luong phien phai lon hon 0.");
+        }
+
+        Item updatedItem = server.getItemController().createItem(
+                category,
+                auction.getItem().getId(),
+                title,
+                description,
+                startPrice,
+                LocalDateTime.now().plusHours(durationHours),
+                imageHint
+        );
+        auction.setItem(updatedItem);
+        server.updateAuction(auction);
+        appendTransaction("UPDATE_AUCTION", actorUsername, auctionId, "Cap nhat phien dau gia", startPrice);
+        appendNotification("ALL", "Phien dau gia duoc cap nhat", title + " vua duoc cap nhat boi " + actorUsername + ".");
+        return auction;
+    }
+
     public synchronized Auction placeBid(String auctionId, String bidderUsername, double amount) {
         Auction auction = getAuctionById(auctionId);
         if (auction.isClosed()) {
-            throw new IllegalStateException("Phien dau gia da ket thuc.");
+            throw new AuctionClosedException("Phien dau gia da ket thuc.");
         }
         if (amount < auction.getMinimumBid()) {
-            throw new IllegalArgumentException("Gia dat phai tu " + formatCurrency(auction.getMinimumBid()) + " tro len.");
+            throw new InvalidBidException("Gia dat phai tu " + formatCurrency(auction.getMinimumBid()) + " tro len.");
         }
 
         List<Auction> auctions = server.getAuctions();
@@ -114,15 +161,15 @@ public class AuctionController {
 
     public synchronized Auction enableAutoBid(String auctionId, String bidderUsername, double maxAmount, double incrementStep) {
         if (maxAmount <= 0 || incrementStep < MIN_BID_STEP) {
-            throw new IllegalArgumentException("Thong so mua tu dong khong hop le.");
+            throw new InvalidBidException("Thong so mua tu dong khong hop le.");
         }
         List<Auction> auctions = server.getAuctions();
         Auction auction = findAuctionMutable(auctions, auctionId);
         if (auction.isClosed()) {
-            throw new IllegalStateException("Phien dau gia da ket thuc.");
+            throw new AuctionClosedException("Phien dau gia da ket thuc.");
         }
         if (maxAmount < auction.getMinimumBid()) {
-            throw new IllegalArgumentException("Muc tran mua tu dong phai tu " + formatCurrency(auction.getMinimumBid()) + " tro len.");
+            throw new InvalidBidException("Muc tran mua tu dong phai tu " + formatCurrency(auction.getMinimumBid()) + " tro len.");
         }
         auction.addOrReplaceAutoBid(new AutoBid(bidderUsername, maxAmount, incrementStep));
         server.replaceAuctionAutoBids(auction);
@@ -135,9 +182,7 @@ public class AuctionController {
     public synchronized Auction cancelAuction(String auctionId, String actorUsername) {
         List<Auction> auctions = server.getAuctions();
         Auction auction = findAuctionMutable(auctions, auctionId);
-        if (!auction.getSellerUsername().equalsIgnoreCase(actorUsername)) {
-            throw new IllegalStateException("Chi nguoi dang ban moi co the huy phien dau gia nay.");
-        }
+        ensureSellerOwnsAuction(auction, actorUsername);
         if (!auction.getBidHistory().isEmpty()) {
             throw new IllegalStateException("Khong the huy phien dau gia khi da co nguoi ra gia.");
         }
@@ -149,6 +194,16 @@ public class AuctionController {
         appendTransaction("CANCEL_AUCTION", actorUsername, auctionId, "Huy phien dau gia", 0);
         appendNotification("ALL", "Phien dau gia da bi huy", auction.getItem().getName() + " da bi huy.");
         return auction;
+    }
+
+    public synchronized void deleteAuction(String auctionId, String actorUsername) {
+        List<Auction> auctions = server.getAuctions();
+        Auction auction = findAuctionMutable(auctions, auctionId);
+        ensureSellerOwnsAuction(auction, actorUsername);
+        ensureAuctionEditable(auction);
+        server.deleteAuction(auctionId);
+        appendTransaction("DELETE_AUCTION", actorUsername, auctionId, "Xoa phien dau gia", 0);
+        appendNotification("ALL", "Phien dau gia da bi xoa", auction.getItem().getName() + " da bi xoa boi " + actorUsername + ".");
     }
 
     public synchronized Auction payAuction(String auctionId, String bidderUsername) {
@@ -268,6 +323,24 @@ public class AuctionController {
                 .filter(candidate -> candidate.getId().equalsIgnoreCase(auctionId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Khong tim thay phien " + auctionId));
+    }
+
+    private void ensureSellerOwnsAuction(Auction auction, String actorUsername) {
+        if (!auction.getSellerUsername().equalsIgnoreCase(actorUsername)) {
+            throw new AuthorizationException("Chi nguoi dang ban moi co quyen sua phien dau gia nay.");
+        }
+    }
+
+    private void ensureAuctionEditable(Auction auction) {
+        if (auction.isClosed()) {
+            throw new AuctionClosedException("Phien dau gia da ket thuc.");
+        }
+        if (!auction.getBidHistory().isEmpty()) {
+            throw new InvalidBidException("Khong the sua hoac xoa phien khi da co bid.");
+        }
+        if (auction.isPaid()) {
+            throw new IllegalStateException("Khong the sua phien da thanh toan.");
+        }
     }
 
     private User findUser(List<User> users, String username) {

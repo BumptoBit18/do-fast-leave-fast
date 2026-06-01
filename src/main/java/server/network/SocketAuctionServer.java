@@ -17,25 +17,32 @@ public final class SocketAuctionServer {
     }
 
     public static void ensureStarted(int port) {
-        if (STARTED.compareAndSet(false, true)) {
+        if (!STARTED.compareAndSet(false, true)) {
+            return;
+        }
+
+        try {
+            ServerSocket serverSocket = new ServerSocket(port);
             executor = Executors.newFixedThreadPool(MAX_CONCURRENT_CLIENTS);
-            Thread serverThread = new Thread(() -> runServer(port), "auction-socket-server");
+            Thread serverThread = new Thread(() -> runServer(serverSocket), "auction-socket-server");
             serverThread.setDaemon(true);
             serverThread.start();
-            System.out.println("[Server] Khoi dong thanh cong, toi da " + MAX_CONCURRENT_CLIENTS + " client cung luc.");
+            System.out.println("[Server] Dang lang nghe tai cong " + port + ", toi da " + MAX_CONCURRENT_CLIENTS + " client cung luc.");
+        } catch (IOException ex) {
+            STARTED.set(false);
+            throw new IllegalStateException("Khong the khoi dong socket server o cong " + port + ". Cong nay co the dang bi chiem.", ex);
         }
     }
 
-    private static void runServer(int port) {
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("[Server] Dang lang nghe tai cong " + port);
+    private static void runServer(ServerSocket serverSocket) {
+        try (serverSocket) {
             while (true) {
                 Socket socket = serverSocket.accept();
                 executor.submit(new ServerHandler(socket));
             }
         } catch (IOException ex) {
             STARTED.set(false);
-            throw new IllegalStateException("Khong the khoi dong socket server o cong " + port, ex);
+            throw new IllegalStateException("Socket server da dung bat ngo.", ex);
         }
     }
 }

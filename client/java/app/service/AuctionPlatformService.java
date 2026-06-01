@@ -201,6 +201,12 @@ public class AuctionPlatformService {
         return lot;
     }
 
+    public AuctionLot updateAuction(AuctionLot auction, String title, String category, String description, double startPrice, int durationHours, String imageHint) {
+        AuctionLot lot = connection.updateAuction(auction.getId(), title, category, description, startPrice, durationHours, imageHint);
+        invalidateCollections();
+        return lot;
+    }
+
     public AuctionLot placeBid(AuctionLot auction, double amount) {
         AuctionLot lot = connection.placeBid(auction.getId(), amount);
         invalidateCollections();
@@ -250,6 +256,11 @@ public class AuctionPlatformService {
         AuctionLot lot = connection.cancelAuction(auction.getId());
         invalidateCollections();
         return lot;
+    }
+
+    public void deleteAuction(AuctionLot auction) {
+        connection.deleteAuction(auction.getId());
+        invalidateCollections();
     }
 
     public DashboardStats getStats() {

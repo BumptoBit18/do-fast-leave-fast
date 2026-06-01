@@ -8,6 +8,19 @@ param(
     [string]$DbSslMode = ""
 )
 
+$portProbe = [System.Net.Sockets.TcpClient]::new()
+try {
+    $connectTask = $portProbe.ConnectAsync("localhost", $Port)
+    if ($connectTask.Wait(500)) {
+        Write-Error "Cong $Port dang duoc su dung. Neu auction server da chay thi khong can mo them server. Neu day la tien trinh cu, hay dung tien trinh dang giu cong truoc."
+        exit 1
+    }
+} catch {
+    # Connection failures are expected when the port is free.
+} finally {
+    $portProbe.Dispose()
+}
+
 $modulePath = @(
     "$env:USERPROFILE\.m2\repository\org\openjfx\javafx-base\21.0.6\javafx-base-21.0.6-win.jar",
     "$env:USERPROFILE\.m2\repository\org\openjfx\javafx-controls\21.0.6\javafx-controls-21.0.6-win.jar",

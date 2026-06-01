@@ -360,10 +360,6 @@ public class AdminController implements MessageListener {
         usernameColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getUsername()));
         usernameColumn.setPrefWidth(180);
 
-        TableColumn<AppUser, String> passwordColumn = new TableColumn<>("Mat khau");
-        passwordColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getPassword()));
-        passwordColumn.setPrefWidth(160);
-
         TableColumn<AppUser, String> nameColumn = new TableColumn<>("Ho va ten");
         nameColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getFullName()));
         nameColumn.setPrefWidth(220);
@@ -372,7 +368,7 @@ public class AdminController implements MessageListener {
         roleColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getRole().name()));
         roleColumn.setPrefWidth(120);
 
-        table.getColumns().setAll(List.of(idColumn, usernameColumn, passwordColumn, nameColumn, roleColumn));
+        table.getColumns().setAll(List.of(idColumn, usernameColumn, nameColumn, roleColumn));
         return table;
     }
 

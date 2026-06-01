@@ -1,5 +1,5 @@
 param(
-    [string]$ServerHost = "127.0.0.1",
+    [string]$ServerHost = "localhost",
     [int]$Port = 5050,
     [string]$DbHost = "",
     [int]$DbPort = 5432,

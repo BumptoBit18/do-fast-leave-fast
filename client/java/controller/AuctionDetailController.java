@@ -18,8 +18,6 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -27,8 +25,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import network.MessageListener;
 
-import java.io.ByteArrayInputStream;
-import java.util.Base64;
 import java.util.List;
 import network.ServerConnection;
 import shared.socket.RealtimeEvent;
@@ -141,45 +137,12 @@ public class AuctionDetailController implements MessageListener {
         Label description = new Label(auctionLot.getDescription());
         description.setWrapText(true);
 
-        card.getChildren().addAll(title, meta, price, status, leader, antiSnipe, description);
+        Label imageHint = new Label("Mo ta anh: " + auctionLot.getImageHint());
+        imageHint.setWrapText(true);
+        imageHint.getStyleClass().add("muted-label");
 
-        // Hien thi anh san pham neu co
-        ImageView imageView = buildProductImage(auctionLot.getImageHint(), 380, 220);
-        if (imageView != null) {
-            card.getChildren().add(1, imageView); // chen ngay sau title
-        }
-
+        card.getChildren().addAll(title, meta, price, status, leader, antiSnipe, imageHint, description);
         return card;
-    }
-
-    /**
-     * Tao ImageView tu Base64 data URI (data:image/...;base64,...).
-     * Tra ve null neu imageHint rong hoac khong phai dinh dang Base64 hop le.
-     */
-    private ImageView buildProductImage(String imageHint, double maxWidth, double maxHeight) {
-        if (imageHint == null || imageHint.isBlank()) {
-            return null;
-        }
-        try {
-            String base64Data = imageHint;
-            if (imageHint.contains(",")) {
-                base64Data = imageHint.substring(imageHint.indexOf(',') + 1);
-            }
-            byte[] imageBytes = Base64.getDecoder().decode(base64Data);
-            Image image = new Image(new ByteArrayInputStream(imageBytes));
-            if (image.isError()) {
-                return null;
-            }
-            ImageView imageView = new ImageView(image);
-            imageView.setFitWidth(maxWidth);
-            imageView.setFitHeight(maxHeight);
-            imageView.setPreserveRatio(true);
-            imageView.setSmooth(true);
-            imageView.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 6, 0, 0, 2);");
-            return imageView;
-        } catch (Exception ex) {
-            return null;
-        }
     }
 
     private Parent biddingArea(AuctionLot auctionLot, AppUser currentUser) {
