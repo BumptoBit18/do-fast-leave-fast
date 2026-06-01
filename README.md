@@ -1,102 +1,85 @@
-# do-fast-leave-fast
-## AuctionHub
+# AuctionHub
 
-Auction app hoan chinh gom:
+Ung dung dau gia JavaFX theo kien truc Client-Server.
 
-- Dang nhap theo 3 vai tro Bidder, Seller, Admin
-- Dang ky tai khoan moi cho Bidder va Seller
-- Marketplace duyet phien dau gia, loc theo danh muc, xem chi tiet
-- Dat gia, xem lich su bid, chart gia va thong bao
-- Auto bid, anti-snipe, nap vi va thanh toan lot thang dau gia
-- Seller Studio tao phien moi, quan ly lot dang ban va xem thong bao
-- Admin Control xem thong ke he thong, user, payments, transactions va notifications
+## Chuc nang
 
-### Kien truc hien tai
+- Dang nhap theo 3 vai tro: Bidder, Seller, Admin
+- Dang ky tai khoan Bidder va Seller
+- CRUD phien dau gia cho Seller
+- Seller chon file anh san pham PNG, JPG, GIF hoac BMP toi da 2 MB
+- Dat gia realtime, auto-bidding va anti-sniping
+- Tu dong dong phien, xac dinh nguoi thang va thanh toan
+- Nap tien qua yeu cau cho Admin phe duyet
+- Admin quan ly user, giao dich, thanh toan va thong bao
+- Bieu do lich su gia realtime
 
-- `client -> socket server -> PostgreSQL`
-- May server chay `server.ServerLauncherMain` va la diem duy nhat truy cap database
-- Cac may client chi ket noi toi `auction.server.host` / `auction.server.port`
-- Giao thuc client-server dung `socket TCP + JSON line protocol`
-- Client giao dien dung JavaFX va FXML, controller theo huong MVC
-- Thu muc `data/*.dat` chi con dung de migrate du lieu cu len database trong lan khoi dong dau tien khi database dang rong
+## Kien truc
 
-### Tai khoan mau
+- `client -> TCP socket JSON line protocol -> server -> PostgreSQL`
+- Server chay `server.ServerLauncherMain` va la noi duy nhat truy cap database
+- Client JavaFX dung controller theo huong MVC va nhan `RealtimeEvent` theo Observer Pattern
+- `ServerMain` dung Singleton Pattern
+- `ItemController` dung Factory Method de tao `Electronics`, `Vehicle`, `Art` va `GenericItem`
+- Auto-bidding dung `PriorityQueue` de uu tien rule co muc tran cao nhat
+- Login va dang ky dung FXML that; controller chi xu ly su kien va goi service
+- `data/*.dat` chi dung de migrate du lieu legacy khi database rong
+
+## Tai khoan mau
 
 - `bidder / bidder123`
 - `seller / seller123`
 - `admin / admin`
 
-### Chay tren Windows
+## Chay tren Windows
 
-Chay server tren may dung lam backend chung:
-
-```powershell
-.\run-server.ps1 -Port 5050 -DbHost your-db-host -DbPort 5432 -DbName postgres -DbUser postgres -DbPassword "your-password"
-```
-
-Neu da tao `config/database.properties` thi chi can:
+Neu da tao `config/database.properties`:
 
 ```powershell
 .\run-server.ps1
 ```
 
-Sau do, tren moi may client:
+Mo terminal khac va chay client tren cung may:
 
 ```powershell
-.\run-app.ps1 -ServerHost 192.168.1.10 -Port 5050
+.\run-app.ps1
 ```
 
-`run-app.ps1` se:
-
-1. Bien dich `client/java` va `src/main/java`
-2. Copy `client/resources`
-3. Chay `ClientMain` va ket noi toi server chung
-
-### PostgreSQL / Supabase
-
-Project da duoc chuyen sang dung PostgreSQL lam nguon du lieu chung. Client khong truy cap database truc tiep; moi thao tac deu di qua socket server.
-
-Server se tu dong:
-
-- ket noi toi PostgreSQL
-- tao bang neu database dang rong
-- import du lieu cu tu `data/*.dat` len database trong lan chay dau tien neu co
-
-Can cau hinh database bang 1 trong 3 cach tren may server:
-
-1. Tao file `config/database.properties` dua tren `config/database.properties.example`
-2. Truyen `-Dauction.db.*` khi chay Java
-3. Dat bien moi truong `AUCTION_DB_*`
-
-### Real-time update
-
-Cap nhat du lieu da chuyen sang co che event-driven:
-
-- Moi client mo mot kenh subscribe den server bang action `SUBSCRIBE_EVENTS`
-- Server phat `RealtimeEvent` dang JSON moi khi co thay doi quan trong
-- `AuctionList`, `AuctionDetail`, `Seller`, `Wallet`, `Admin` se refresh theo su kien thay vi polling chu ky
-- Bid history chart hien thi truc X theo timestamp cua tung bid
-
-### Kich ban test thu cong
-
-1. Chay `run-server.ps1` tren may server.
-2. Chay `run-app.ps1 -ServerHost <ip-server>` tren 2 may client khac nhau.
-3. Dang nhap `bidder / bidder123` o client 1, vao chi tiet lot bat ky va dat gia.
-4. O client 2, vao danh sach lot hoac vi de kiem tra du lieu cap nhat ngay sau khi server phat event.
-5. Dang nhap `seller / seller123`, tao mot lot moi trong `Seller Studio`.
-6. Dang nhap `admin / admin`, vao `Admin Control` de xem `Payments`, `Transactions`, `Notifications`.
-
-### Unit test va CI
-
-- Unit test dung JUnit 5 trong `src/test/java`
-- CI workflow nam tai `.github/workflows/java-ci.yml`
-- Lenh local:
+Neu dung ngrok TCP cho client tu may khac:
 
 ```powershell
-mvn test
+ngrok tcp 5050
+.\run-app.ps1 -ServerHost <host-ngrok> -Port <port-ngrok>
 ```
 
-### Luu du lieu
+## Chay tren macOS / Linux
 
-- Nguon du lieu chinh: PostgreSQL
-- `data/users.dat`, `data/auctions.dat`, `data/payments.dat`, `data/transactions.dat`, `data/notifications.dat`, `data/topup-requests.dat`: chi dung de migrate legacy data
+```bash
+chmod +x run-server-macos.sh run-app-macos.sh run-server-linux.sh run-app-linux.sh
+./run-server-linux.sh
+./run-app-linux.sh --server-host localhost --port 5050
+```
+
+Tren macOS thay hau to `linux` bang `macos`.
+
+## Cau hinh database
+
+Tao `config/database.properties` dua tren `config/database.properties.example`, hoac truyen system properties `auction.db.*`, hoac dung bien moi truong `AUCTION_DB_*`. File `config/database.properties` duoc bo qua boi Git de khong day credential len repository.
+
+## Test va CI
+
+Workflow nam tai `.github/workflows/java-ci.yml`.
+
+```powershell
+mvn verify
+```
+
+Lenh nay chay:
+
+- JUnit 5
+- Integration test TCP socket cho request loi, subscribe token va realtime event
+- JaCoCo coverage report
+- JaCoCo gate yeu cau coverage domain `server.model.*` tu 60% tro len
+- Checkstyle coding convention
+
+Bao cao coverage day du nam tai `target/site/jacoco/index.html`.
