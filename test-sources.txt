@@ -2,7 +2,7 @@ src\test\java\app\model\AuctionLotTest.java
 src\test\java\diagnostics\ServerMainProbe.java
 src\test\java\server\controller\ItemControllerTest.java
 src\test\java\shared\json\JsonCodecTest.java
-server\src\test\AuctionControllerTest.java
-server\src\test\AutoBidTest.java
-server\src\test\ConcurrentBidTest.java
-server\src\test\UserControllerTest.java
+server\src\test\server\controller\AuctionControllerTest.java
+server\src\test\server\controller\AutoBidTest.java
+server\src\test\server\controller\ConcurrentBidTest.java
+server\src\test\server\controller\UserControllerTest.java

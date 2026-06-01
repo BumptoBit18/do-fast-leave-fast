@@ -339,8 +339,8 @@ public class ServerConnection implements MessageListener {
             throw ex;
         } catch (Exception ex) {
             throw new IllegalStateException(
-                    "Khong ket noi duoc toi auction server %s:%d. Chi tiet: %s"
-                            .formatted(serverHost, serverPort, ex.getMessage()),
+                    "Khong ket noi duoc toi auction server %s:%d. Hay kiem tra server da chay va client dang tro dung host/port."
+                            .formatted(serverHost, serverPort),
                     ex
             );
         }

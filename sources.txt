@@ -50,6 +50,11 @@ src\main\java\server\dao\NotificationDAO.java
 src\main\java\server\dao\PaymentDAO.java
 src\main\java\server\dao\TopUpRequestDAO.java
 src\main\java\server\dao\UserDAO.java
+src\main\java\server\exception\AuctionClosedException.java
+src\main\java\server\exception\AuctionException.java
+src\main\java\server\exception\AuthenticationException.java
+src\main\java\server\exception\AuthorizationException.java
+src\main\java\server\exception\InvalidBidException.java
 src\main\java\server\model\Auction.java
 src\main\java\server\model\AutoBid.java
 src\main\java\server\model\BidTransaction.java
