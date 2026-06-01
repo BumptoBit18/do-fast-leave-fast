@@ -17,12 +17,14 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.PriorityQueue;
 import java.util.UUID;
 
 public class AuctionController {
     private static final double MIN_BID_STEP = 100_000;
     private static final long ANTI_SNIPE_WINDOW_SECONDS = 300;
     private static final long ANTI_SNIPE_EXTENSION_SECONDS = 180;
+    private static final int MAX_IMAGE_PAYLOAD_CHARS = 2_800_100;
 
     private final ServerMain server;
 
@@ -80,6 +82,10 @@ public class AuctionController {
         if (startPrice <= 0) {
             throw new IllegalArgumentException("Gia khoi diem phai lon hon 0");
         }
+        if (durationHours <= 0) {
+            throw new IllegalArgumentException("Thoi luong phien phai lon hon 0.");
+        }
+        validateImagePayload(imageHint);
 
         String auctionId = "AUC-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
         Item item = server.getItemController().createItem(
@@ -125,6 +131,7 @@ public class AuctionController {
         if (durationHours <= 0) {
             throw new IllegalArgumentException("Thoi luong phien phai lon hon 0.");
         }
+        validateImagePayload(imageHint);
 
         Item updatedItem = server.getItemController().createItem(
                 category,
@@ -144,12 +151,7 @@ public class AuctionController {
 
     public synchronized Auction placeBid(String auctionId, String bidderUsername, double amount) {
         Auction auction = getAuctionById(auctionId);
-        if (auction.isClosed()) {
-            throw new AuctionClosedException("Phien dau gia da ket thuc.");
-        }
-        if (amount < auction.getMinimumBid()) {
-            throw new InvalidBidException("Gia dat phai tu " + formatCurrency(auction.getMinimumBid()) + " tro len.");
-        }
+        auction.validateBid(amount);
 
         List<Auction> auctions = server.getAuctions();
         Auction persistedAuction = findAuctionMutable(auctions, auctionId);
@@ -267,11 +269,14 @@ public class AuctionController {
         int safety = 0;
         do {
             changed = false;
-            AutoBid bestRule = auction.getAutoBids().stream()
+            PriorityQueue<AutoBid> candidates = new PriorityQueue<>(
+                    java.util.Comparator.comparingDouble(AutoBid::getMaxAmount).reversed()
+            );
+            auction.getAutoBids().stream()
                     .filter(rule -> !rule.getBidderUsername().equalsIgnoreCase(auction.getHighestBidder()))
                     .filter(rule -> rule.getMaxAmount() >= auction.getMinimumBid())
-                    .max(java.util.Comparator.comparingDouble(AutoBid::getMaxAmount))
-                    .orElse(null);
+                    .forEach(candidates::offer);
+            AutoBid bestRule = candidates.poll();
 
             if (bestRule != null) {
                 double nextAmount = Math.min(bestRule.getMaxAmount(), auction.getCurrentPrice() + bestRule.getIncrementStep());
@@ -340,6 +345,18 @@ public class AuctionController {
         }
         if (auction.isPaid()) {
             throw new IllegalStateException("Khong the sua phien da thanh toan.");
+        }
+    }
+
+    private void validateImagePayload(String imagePayload) {
+        if (imagePayload == null || imagePayload.isBlank()) {
+            return;
+        }
+        if (imagePayload.length() > MAX_IMAGE_PAYLOAD_CHARS) {
+            throw new IllegalArgumentException("Anh san pham toi da 2 MB.");
+        }
+        if (!imagePayload.startsWith("data:image/") || !imagePayload.contains(";base64,")) {
+            throw new IllegalArgumentException("Anh san pham khong dung dinh dang.");
         }
     }
 

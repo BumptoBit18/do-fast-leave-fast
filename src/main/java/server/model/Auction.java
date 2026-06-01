@@ -1,5 +1,7 @@
 package server.model;
 
+import server.exception.AuctionClosedException;
+import server.exception.InvalidBidException;
 import server.model.item.Item;
 
 import java.io.Serializable;
@@ -8,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class Auction implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -17,6 +20,7 @@ public class Auction implements Serializable {
     private Item item;
     private final List<BidTransaction> bidHistory = new ArrayList<>();
     private final List<AutoBid> autoBids = new ArrayList<>();
+    private final ReentrantLock bidLock = new ReentrantLock();
     private boolean cancelled;
     private boolean paid;
     private boolean antiSnipeTriggered;
@@ -45,11 +49,21 @@ public class Auction implements Serializable {
     }
 
     public List<BidTransaction> getBidHistory() {
-        return bidHistory;
+        bidLock.lock();
+        try {
+            return List.copyOf(bidHistory);
+        } finally {
+            bidLock.unlock();
+        }
     }
 
     public List<AutoBid> getAutoBids() {
-        return autoBids;
+        bidLock.lock();
+        try {
+            return List.copyOf(autoBids);
+        } finally {
+            bidLock.unlock();
+        }
     }
 
     public boolean isCancelled() {
@@ -72,37 +86,76 @@ public class Auction implements Serializable {
         return cancelled || LocalDateTime.now().isAfter(item.getEndTime());
     }
 
+    public void validateBid(double amount) {
+        if (isClosed()) {
+            throw new AuctionClosedException("Phien dau gia da ket thuc.");
+        }
+        if (amount < getMinimumBid()) {
+            throw new InvalidBidException("Gia dat phai cao hon gia hien tai.");
+        }
+    }
+
     public double getCurrentPrice() {
-        BidTransaction highest = getHighestBid();
-        return highest == null ? item.getStartingPrice() : highest.getAmount();
+        bidLock.lock();
+        try {
+            BidTransaction highest = getHighestBid();
+            return highest == null ? item.getStartingPrice() : highest.getAmount();
+        } finally {
+            bidLock.unlock();
+        }
     }
 
     public double getMinimumBid() {
-        return getCurrentPrice() + 100_000;
+        bidLock.lock();
+        try {
+            return getCurrentPrice() + 100_000;
+        } finally {
+            bidLock.unlock();
+        }
     }
 
     public BidTransaction getHighestBid() {
-        return bidHistory.stream()
-                .max(Comparator.comparingDouble(BidTransaction::getAmount))
-                .orElse(null);
+        bidLock.lock();
+        try {
+            return bidHistory.stream()
+                    .max(Comparator.comparingDouble(BidTransaction::getAmount))
+                    .orElse(null);
+        } finally {
+            bidLock.unlock();
+        }
     }
 
     public String getHighestBidder() {
-        BidTransaction highest = getHighestBid();
-        return highest == null ? "Chua co nguoi dau gia" : highest.getActorUsername();
+        bidLock.lock();
+        try {
+            BidTransaction highest = getHighestBid();
+            return highest == null ? "Chua co nguoi dau gia" : highest.getActorUsername();
+        } finally {
+            bidLock.unlock();
+        }
     }
 
     public String getStatusLabel() {
+        return switch (getStatus()) {
+            case OPEN -> "Open";
+            case RUNNING -> "Live";
+            case FINISHED -> "Finished";
+            case PAID -> "Paid";
+            case CANCELLED -> "Cancelled";
+        };
+    }
+
+    public AuctionStatus getStatus() {
         if (cancelled) {
-            return "Cancelled";
+            return AuctionStatus.CANCELLED;
         }
         if (paid) {
-            return "Paid";
+            return AuctionStatus.PAID;
         }
         if (LocalDateTime.now().isAfter(item.getEndTime())) {
-            return "Finished";
+            return AuctionStatus.FINISHED;
         }
-        return bidHistory.isEmpty() ? "Open" : "Live";
+        return bidHistory.isEmpty() ? AuctionStatus.OPEN : AuctionStatus.RUNNING;
     }
 
     public String getTimeLeftLabel() {
@@ -123,12 +176,22 @@ public class Auction implements Serializable {
     }
 
     public void addBid(BidTransaction bid) {
-        bidHistory.add(bid);
+        bidLock.lock();
+        try {
+            bidHistory.add(bid);
+        } finally {
+            bidLock.unlock();
+        }
     }
 
     public void addOrReplaceAutoBid(AutoBid autoBid) {
-        autoBids.removeIf(rule -> rule.getBidderUsername().equalsIgnoreCase(autoBid.getBidderUsername()));
-        autoBids.add(autoBid);
+        bidLock.lock();
+        try {
+            autoBids.removeIf(rule -> rule.getBidderUsername().equalsIgnoreCase(autoBid.getBidderUsername()));
+            autoBids.add(autoBid);
+        } finally {
+            bidLock.unlock();
+        }
     }
 
     public void cancel() {

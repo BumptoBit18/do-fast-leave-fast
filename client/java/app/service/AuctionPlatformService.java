@@ -201,6 +201,17 @@ public class AuctionPlatformService {
         return lot;
     }
 
+    public AppUser updateUser(String username, String fullName, String password) {
+        AppUser user = connection.updateUser(username, fullName, password);
+        invalidateCollections();
+        return user;
+    }
+
+    public void deleteUser(String username) {
+        connection.deleteUser(username);
+        invalidateCollections();
+    }
+
     public AuctionLot updateAuction(AuctionLot auction, String title, String category, String description, double startPrice, int durationHours, String imageHint) {
         AuctionLot lot = connection.updateAuction(auction.getId(), title, category, description, startPrice, durationHours, imageHint);
         invalidateCollections();

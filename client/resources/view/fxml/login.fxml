@@ -1,3 +1,109 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
-<StackPane fx:id="root" xmlns:fx="http://javafx.com/fxml" prefWidth="1280.0" prefHeight="820.0" />
+<?import javafx.scene.layout.VBox?>
+
+<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           prefWidth="1280.0" prefHeight="820.0" minWidth="1180.0" minHeight="760.0"
+           styleClass="app-shell, auth-root">
+    <padding>
+        <Insets top="24.0" right="24.0" bottom="24.0" left="24.0" />
+    </padding>
+    <HBox alignment="CENTER" spacing="28.0" maxWidth="1240.0" styleClass="auth-layout">
+        <VBox spacing="16.0" prefWidth="540.0" minHeight="720.0" HBox.hgrow="ALWAYS" styleClass="hero-panel">
+            <padding>
+                <Insets top="36.0" right="36.0" bottom="36.0" left="36.0" />
+            </padding>
+            <Label text="AUCTION APP" styleClass="hero-title" />
+            <Label text="Ung dung dau gia truc tuyen chuyen nghiep, uy tin" styleClass="hero-subtitle" />
+            <HBox spacing="8.0">
+                <Label text="BIDDER" styleClass="soft-badge" />
+                <Label text="SELLER" styleClass="soft-badge" />
+                <Label text="ADMIN" styleClass="soft-badge" />
+            </HBox>
+            <VBox spacing="10.0">
+                <VBox spacing="4.0" styleClass="feature-row">
+                    <Label text="BIDDER" styleClass="tag" />
+                    <Label text="Duyet danh sach, xem chi tiet va dat gia theo thoi gian thuc" wrapText="true" styleClass="hero-list" />
+                </VBox>
+                <VBox spacing="4.0" styleClass="feature-row">
+                    <Label text="SELLER" styleClass="tag" />
+                    <Label text="Tao phien dau gia, quan ly lo dang ban va theo doi gia" wrapText="true" styleClass="hero-list" />
+                </VBox>
+                <VBox spacing="4.0" styleClass="feature-row">
+                    <Label text="ADMIN" styleClass="tag" />
+                    <Label text="Giam sat du lieu he thong, tai khoan va toan bo phien dau gia" wrapText="true" styleClass="hero-list" />
+                </VBox>
+            </VBox>
+        </VBox>
+        <TabPane fx:id="authTabs" prefWidth="560.0" minHeight="720.0" HBox.hgrow="ALWAYS"
+                 tabClosingPolicy="UNAVAILABLE" styleClass="card, auth-card">
+            <tabs>
+                <Tab text="Dang nhap">
+                    <VBox spacing="14.0">
+                        <padding>
+                            <Insets top="28.0" right="28.0" bottom="28.0" left="28.0" />
+                        </padding>
+                        <Label text="Dang nhap he thong" styleClass="section-title" />
+                        <VBox spacing="4.0">
+                            <Label text="Ten dang nhap" />
+                            <Label text="Dung ten tai khoan da duoc cap hoac da dang ky truoc do." styleClass="muted-label" wrapText="true" />
+                            <TextField fx:id="usernameField" promptText="Vi du: bidder" />
+                        </VBox>
+                        <VBox spacing="4.0">
+                            <Label text="Mat khau" />
+                            <Label text="Mat khau phai dung voi tai khoan tuong ung trong he thong." styleClass="muted-label" wrapText="true" />
+                            <PasswordField fx:id="passwordField" promptText="Nhap mat khau" />
+                        </VBox>
+                        <VBox spacing="4.0">
+                            <Label text="Loai tai khoan" />
+                            <Label text="Chon dung vai tro de vao khu vuc nguoi mua, nguoi ban hoac quan tri." styleClass="muted-label" wrapText="true" />
+                            <ComboBox fx:id="roleBox" maxWidth="Infinity" />
+                        </VBox>
+                        <Button fx:id="loginButton" text="Dang nhap" maxWidth="Infinity"
+                                onAction="#handleLogin" styleClass="primary-button" />
+                    </VBox>
+                </Tab>
+                <Tab text="Dang ky">
+                    <VBox spacing="14.0">
+                        <padding>
+                            <Insets top="28.0" right="28.0" bottom="28.0" left="28.0" />
+                        </padding>
+                        <Label text="Tao tai khoan moi" styleClass="section-title" />
+                        <VBox spacing="4.0">
+                            <Label text="Ho va ten" />
+                            <Label text="Nhap ho ten day du de he thong hien thi dung thong tin nguoi dung." styleClass="muted-label" wrapText="true" />
+                            <TextField fx:id="fullNameField" promptText="Vi du: Nguyen Van A" />
+                        </VBox>
+                        <VBox spacing="4.0">
+                            <Label text="Ten dang nhap moi" />
+                            <Label text="Ten nay se dung de dang nhap sau nay va khong duoc trung voi nguoi khac." styleClass="muted-label" wrapText="true" />
+                            <TextField fx:id="registerUserField" promptText="Tao ten dang nhap moi" />
+                        </VBox>
+                        <VBox spacing="4.0">
+                            <Label text="Mat khau" />
+                            <Label text="Mat khau nen de nho voi ban nhung du an toan, toi thieu 6 ky tu." styleClass="muted-label" wrapText="true" />
+                            <PasswordField fx:id="registerPasswordField" promptText="It nhat 6 ky tu" />
+                        </VBox>
+                        <VBox spacing="4.0">
+                            <Label text="Loai tai khoan" />
+                            <Label text="Nguoi mua dung de dau gia, nguoi ban dung de dang lo dau gia." styleClass="muted-label" wrapText="true" />
+                            <ComboBox fx:id="registerRoleBox" maxWidth="Infinity" />
+                        </VBox>
+                        <Button fx:id="registerButton" text="Dang ky" maxWidth="Infinity"
+                                onAction="#handleRegister" styleClass="primary-button" />
+                    </VBox>
+                </Tab>
+            </tabs>
+        </TabPane>
+    </HBox>
+</StackPane>

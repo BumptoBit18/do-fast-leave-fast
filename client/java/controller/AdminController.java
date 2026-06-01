@@ -19,6 +19,8 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -142,7 +144,71 @@ public class AdminController implements MessageListener {
         topUpTab.setUserData(AdminTab.TOP_UP);
         Tab auctionTab = new Tab("Phien dau gia", auctionTable);
         auctionTab.setUserData(AdminTab.AUCTION);
-        Tab userTab = new Tab("Nguoi dung", userTable);
+        TextField userFullNameField = new TextField();
+        userFullNameField.setPromptText("Ho va ten moi");
+        PasswordField userPasswordField = new PasswordField();
+        userPasswordField.setPromptText("De trong neu khong doi mat khau");
+
+        Button loadUserButton = new Button("Nap user vao form");
+        loadUserButton.getStyleClass().add("secondary-button");
+        loadUserButton.setOnAction(event -> {
+            AppUser selected = userTable.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                AlertUtil.error("Chua chon user", "Hay chon mot tai khoan trong bang.");
+                return;
+            }
+            userFullNameField.setText(selected.getFullName());
+            userPasswordField.clear();
+        });
+
+        Button updateUserButton = new Button("Cap nhat user");
+        updateUserButton.getStyleClass().add("primary-button");
+        updateUserButton.setOnAction(event -> {
+            AppUser selected = userTable.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                AlertUtil.error("Chua chon user", "Hay chon mot tai khoan trong bang.");
+                return;
+            }
+            try {
+                service.updateUser(selected.getUsername(), userFullNameField.getText(), userPasswordField.getText());
+                AlertUtil.info("Cap nhat thanh cong", "Thong tin tai khoan da duoc cap nhat.");
+                userFullNameField.clear();
+                userPasswordField.clear();
+                refreshActiveTabAsync(tabs.getSelectionModel().getSelectedItem(), topUpTable, auctionTable, userTable, paymentTable, transactionTable, notificationTable, false);
+            } catch (Exception ex) {
+                AlertUtil.error("Khong the cap nhat user", ex.getMessage());
+            }
+        });
+
+        Button deleteUserButton = new Button("Xoa user");
+        deleteUserButton.getStyleClass().add("secondary-button");
+        deleteUserButton.setOnAction(event -> {
+            AppUser selected = userTable.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                AlertUtil.error("Chua chon user", "Hay chon mot tai khoan trong bang.");
+                return;
+            }
+            try {
+                service.deleteUser(selected.getUsername());
+                AlertUtil.info("Da xoa user", "Tai khoan da duoc xoa khoi he thong.");
+                userFullNameField.clear();
+                userPasswordField.clear();
+                refreshActiveTabAsync(tabs.getSelectionModel().getSelectedItem(), topUpTable, auctionTable, userTable, paymentTable, transactionTable, notificationTable, false);
+            } catch (Exception ex) {
+                AlertUtil.error("Khong the xoa user", ex.getMessage());
+            }
+        });
+
+        VBox userPanel = new VBox(
+                12,
+                new Label("Chon user de cap nhat ho ten, doi mat khau hoac xoa tai khoan."),
+                userTable,
+                AppUi.fieldGroup("Ho va ten", "Nhap ho ten moi cho tai khoan da chon.", userFullNameField),
+                AppUi.fieldGroup("Mat khau moi", "Bo trong neu muon giu nguyen mat khau hien tai.", userPasswordField),
+                new HBox(12, loadUserButton, updateUserButton, deleteUserButton)
+        );
+
+        Tab userTab = new Tab("Nguoi dung", userPanel);
         userTab.setUserData(AdminTab.USER);
         Tab paymentTab = new Tab("Thanh toan", paymentTable);
         paymentTab.setUserData(AdminTab.PAYMENT);

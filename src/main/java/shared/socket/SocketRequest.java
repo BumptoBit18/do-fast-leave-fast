@@ -8,6 +8,7 @@ public class SocketRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private String action;
+    private String sessionToken;
     private String actorUsername;
     private String username;
     private String password;
@@ -39,6 +40,14 @@ public class SocketRequest implements Serializable {
 
     public String getActorUsername() {
         return actorUsername;
+    }
+
+    public String getSessionToken() {
+        return sessionToken;
+    }
+
+    public void setSessionToken(String sessionToken) {
+        this.sessionToken = sessionToken;
     }
 
     public void setActorUsername(String actorUsername) {
@@ -200,6 +209,7 @@ public class SocketRequest implements Serializable {
     public Map<String, Object> toMap() {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("action", action);
+        values.put("sessionToken", sessionToken);
         values.put("actorUsername", actorUsername);
         values.put("username", username);
         values.put("password", password);
@@ -226,6 +236,7 @@ public class SocketRequest implements Serializable {
     public static SocketRequest fromMap(Map<String, Object> values) {
         SocketRequest request = new SocketRequest();
         request.setAction((String) values.get("action"));
+        request.setSessionToken((String) values.get("sessionToken"));
         request.setActorUsername((String) values.get("actorUsername"));
         request.setUsername((String) values.get("username"));
         request.setPassword((String) values.get("password"));

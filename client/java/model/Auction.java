@@ -5,7 +5,7 @@ import java.util.List;
 
 public class Auction extends Entity{
     private static final long serialVersionUID = 1L;
-    
+
     private Item item;
     private AuctionStatus status;
     private List<Bid> bidHistory;

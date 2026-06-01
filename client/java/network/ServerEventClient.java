@@ -26,10 +26,10 @@ final class ServerEventClient {
         this.listener = listener;
     }
 
-    synchronized void connect(String username) {
+    synchronized void connect(String username, String sessionToken) {
         disconnect();
 
-        listenerThread = new Thread(() -> listen(username), "auction-event-listener");
+        listenerThread = new Thread(() -> listen(username, sessionToken), "auction-event-listener");
         listenerThread.setDaemon(true);
         listenerThread.start();
     }
@@ -45,7 +45,7 @@ final class ServerEventClient {
         listenerThread = null;
     }
 
-    private void listen(String username) {
+    private void listen(String username, String sessionToken) {
         try (Socket connection = new Socket(serverHost, serverPort);
              BufferedWriter output = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream(), StandardCharsets.UTF_8));
              BufferedReader input = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
@@ -56,6 +56,7 @@ final class ServerEventClient {
             SocketRequest request = new SocketRequest();
             request.setAction("SUBSCRIBE_EVENTS");
             request.setActorUsername(username);
+            request.setSessionToken(sessionToken);
             output.write(JsonCodec.toJson(request.toMap()));
             output.newLine();
             output.flush();

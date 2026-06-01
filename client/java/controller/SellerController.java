@@ -17,18 +17,23 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 
+import java.io.File;
 import java.util.List;
 import network.MessageListener;
 import network.ServerConnection;
 import shared.socket.RealtimeEvent;
 import ui.AppUi;
 import util.AlertUtil;
+import util.ProductImageUtil;
 import util.SceneManager;
 
 public class SellerController implements MessageListener {
@@ -199,8 +204,53 @@ public class SellerController implements MessageListener {
         Spinner<Integer> duration = new Spinner<>(6, 168, 24);
         duration.setEditable(true);
 
-        TextField imageHint = new TextField();
-        imageHint.setPromptText("Vi du: Anh chup mat truoc, mau den, con moi");
+        final String[] selectedImagePayload = {""};
+        Label imageState = new Label("Chua chon anh san pham");
+        imageState.getStyleClass().add("muted-label");
+
+        ImageView imagePreview = new ImageView();
+        imagePreview.setFitWidth(320);
+        imagePreview.setFitHeight(180);
+        imagePreview.setPreserveRatio(true);
+        imagePreview.setSmooth(true);
+        imagePreview.setVisible(false);
+        imagePreview.setManaged(false);
+
+        Button chooseImageButton = new Button("Chon anh tu may");
+        chooseImageButton.getStyleClass().add("secondary-button");
+        chooseImageButton.setOnAction(event -> {
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Chon anh san pham");
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
+                    "Anh san pham (*.png, *.jpg, *.jpeg, *.gif, *.bmp)",
+                    "*.png",
+                    "*.jpg",
+                    "*.jpeg",
+                    "*.gif",
+                    "*.bmp"
+            ));
+            File selectedFile = chooser.showOpenDialog(root.getScene().getWindow());
+            if (selectedFile == null) {
+                return;
+            }
+            try {
+                selectedImagePayload[0] = ProductImageUtil.toDataUri(selectedFile.toPath());
+                imageState.setText("Da chon: " + selectedFile.getName());
+                updateImagePreview(imagePreview, selectedImagePayload[0]);
+            } catch (Exception ex) {
+                AlertUtil.error("Khong doc duoc anh", ex.getMessage());
+            }
+        });
+
+        Button removeImageButton = new Button("Xoa anh da chon");
+        removeImageButton.getStyleClass().add("secondary-button");
+        removeImageButton.setOnAction(event -> {
+            selectedImagePayload[0] = "";
+            imageState.setText("Chua chon anh san pham");
+            updateImagePreview(imagePreview, "");
+        });
+
+        VBox imagePicker = new VBox(8, imagePreview, imageState, new HBox(8, chooseImageButton, removeImageButton));
 
         TextArea description = new TextArea();
         description.setPromptText("Mo ta chi tiet tinh trang, phu kien, xuat xu...");
@@ -219,7 +269,9 @@ public class SellerController implements MessageListener {
             startPrice.clear();
             duration.getValueFactory().setValue(24);
             description.clear();
-            imageHint.clear();
+            selectedImagePayload[0] = "";
+            imageState.setText("Chua chon anh san pham");
+            updateImagePreview(imagePreview, "");
         };
 
         Runnable loadSelectedAuction = () -> {
@@ -236,7 +288,10 @@ public class SellerController implements MessageListener {
             long hoursLeft = java.time.Duration.between(java.time.LocalDateTime.now(), selected.getEndTime()).toHours();
             duration.getValueFactory().setValue((int) Math.max(6, Math.min(168, hoursLeft <= 0 ? 24 : hoursLeft)));
             description.setText(selected.getDescription());
-            imageHint.setText(selected.getImageHint());
+            Image existingImage = ProductImageUtil.decode(selected.getImageHint());
+            selectedImagePayload[0] = existingImage == null ? "" : selected.getImageHint();
+            imageState.setText(existingImage == null ? "Phien nay chua co anh san pham" : "Dang dung anh san pham hien tai");
+            updateImagePreview(imagePreview, selectedImagePayload[0]);
         };
 
         fillFormButton.setOnAction(event -> loadSelectedAuction.run());
@@ -246,7 +301,6 @@ public class SellerController implements MessageListener {
         createButton.setMaxWidth(Double.MAX_VALUE);
         createButton.setOnAction(event -> {
             try {
-                String imageDescription = imageHint.getText().trim();
                 if (editingAuction[0] == null) {
                     service.createAuction(
                             service.getCurrentUser().getUsername(),
@@ -255,7 +309,7 @@ public class SellerController implements MessageListener {
                             description.getText().trim(),
                             Double.parseDouble(startPrice.getText().trim()),
                             duration.getValue(),
-                            imageDescription
+                            selectedImagePayload[0]
                     );
                     AlertUtil.info("Tao thanh cong", "Phien dau gia moi da duoc tao.");
                 } else {
@@ -266,7 +320,7 @@ public class SellerController implements MessageListener {
                             description.getText().trim(),
                             Double.parseDouble(startPrice.getText().trim()),
                             duration.getValue(),
-                            imageDescription
+                            selectedImagePayload[0]
                     );
                     AlertUtil.info("Cap nhat thanh cong", "Phien dau gia da duoc cap nhat.");
                 }
@@ -288,12 +342,19 @@ public class SellerController implements MessageListener {
                 AppUi.fieldGroup("Danh muc", "Chon nhom phu hop de nguoi mua loc san pham de hon.", category),
                 AppUi.fieldGroup("Gia khoi diem", "Nhap muc gia ban dau cho phien dau gia, chua bao gom cac lan dat tiep theo.", startPrice),
                 AppUi.fieldGroup("Thoi luong phien (gio)", "Chon so gio phien dau gia se mo truoc khi tu dong ket thuc.", duration),
-                AppUi.fieldGroup("Mo ta anh san pham", "Mo ta ngan gon goc chup, mau sac hoac dac diem nhan biet cua san pham.", imageHint),
+                AppUi.fieldGroup("Anh san pham", "Chon file PNG, JPG, GIF hoac BMP tu may. Kich thuoc toi da 2 MB.", imagePicker),
                 AppUi.fieldGroup("Mo ta chi tiet", "Ghi ro tinh trang san pham, phu kien kem theo va cac luu y can thiet.", description),
                 createButton,
                 resetButton
         );
         return form;
+    }
+
+    private void updateImagePreview(ImageView preview, String payload) {
+        Image image = ProductImageUtil.decode(payload);
+        preview.setImage(image);
+        preview.setVisible(image != null);
+        preview.setManaged(image != null);
     }
 
     @Override

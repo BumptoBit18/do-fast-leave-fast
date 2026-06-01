@@ -75,6 +75,7 @@ if ($DbSslMode -and $DbSslMode.Trim()) {
 }
 
 $javaArgs += @(
+    "--enable-native-access=javafx.graphics",
     "--module-path", $modulePath,
     "--add-modules", "javafx.controls,javafx.fxml",
     "-cp", $classPath,

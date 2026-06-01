@@ -21,7 +21,6 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -33,10 +32,9 @@ import network.MessageListener;
 import network.ServerConnection;
 import shared.socket.RealtimeEvent;
 import ui.AppUi;
+import util.ProductImageUtil;
 import util.SceneManager;
 
-import java.io.ByteArrayInputStream;
-import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -263,23 +261,12 @@ public class AuctionListController implements MessageListener {
         );
         previewDescription.setText(selected.getDescription());
 
-        // Hien thi anh Base64 neu co
-        String imageHint = selected.getImageHint();
-        if (imageHint != null && !imageHint.isBlank()) {
-            try {
-                String base64Data = imageHint.contains(",")
-                        ? imageHint.substring(imageHint.indexOf(',') + 1)
-                        : imageHint;
-                byte[] imageBytes = Base64.getDecoder().decode(base64Data);
-                Image image = new Image(new ByteArrayInputStream(imageBytes));
-                if (!image.isError()) {
-                    previewImage.setImage(image);
-                    previewImage.setVisible(true);
-                    previewImage.setManaged(true);
-                    return;
-                }
-            } catch (Exception ignored) {
-            }
+        javafx.scene.image.Image image = ProductImageUtil.decode(selected.getImageHint());
+        if (image != null) {
+            previewImage.setImage(image);
+            previewImage.setVisible(true);
+            previewImage.setManaged(true);
+            return;
         }
         previewImage.setImage(null);
         previewImage.setVisible(false);

@@ -19,16 +19,16 @@ public class AuctionViewModel {
     public AuctionViewModel(Auction auction) {
         // Lấy ID từ lớp cha Entity
         this.id = new SimpleStringProperty(auction.getId());
-        
+
         // Lấy tên sản phẩm từ đối tượng Item trong Auction
         this.itemName = new SimpleStringProperty(auction.getItem().getName());
-        
+
         // Lấy giá khởi điểm từ Item
         this.currentPrice = new SimpleDoubleProperty(auction.getItem().getStartingPrice());
-        
+
         // Chuyển đổi Enum AuctionStatus sang String để hiển thị
         this.status = new SimpleStringProperty(auction.getStatus().toString());
-        
+
         // Mặc định cho thời gian còn lại (sẽ được cập nhật sau bởi Timer)
         this.timeLeft = new SimpleStringProperty("Calculating...");
     }

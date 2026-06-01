@@ -19,25 +19,44 @@ public class MessageRouter {
         try {
             syncForAction(request.getAction());
             return switch (request.getAction()) {
-                case "LOGIN" -> SocketResponse.ok(toUserPayload(
-                        server.getUserController().login(request.getUsername(), request.getPassword(), request.getRole())
-                ));
+                case "LOGIN" -> {
+                    User user = server.getUserController().login(request.getUsername(), request.getPassword(), request.getRole());
+                    yield SocketResponse.ok(toUserPayload(user, SessionRegistry.create(user.getUsername())));
+                }
                 case "REGISTER" -> SocketResponse.ok(toUserPayload(
                         server.getUserController().register(request.getUsername(), request.getPassword(), request.getFullName(), request.getRole())
                 ));
-                case "GET_CURRENT_USER" -> SocketResponse.ok(toUserPayload(findUser(request.getActorUsername())));
+                case "LOGOUT" -> {
+                    SessionRegistry.invalidate(request.getSessionToken());
+                    yield SocketResponse.ok(null);
+                }
+                case "GET_CURRENT_USER" -> SocketResponse.ok(toUserPayload(authenticatedUser(request)));
                 case "GET_AUCTIONS" -> SocketResponse.ok(server.getAuctionController().listAuctions().stream().map(this::toAuctionPayload).toList());
                 case "GET_AUCTION_BY_ID" -> SocketResponse.ok(toAuctionPayload(server.getAuctionController().getAuctionById(request.getAuctionId())));
                 case "SEARCH_AUCTIONS" -> SocketResponse.ok(server.getAuctionController().searchAuctions(request.getKeyword(), request.getCategory()).stream().map(this::toAuctionPayload).toList());
                 case "GET_USERS" -> {
-                    requireAdmin(request.getActorUsername());
+                    requireRole(request, "ADMIN");
                     yield SocketResponse.ok(server.getUsersDirect().stream().map(this::toUserPayload).toList());
+                }
+                case "UPDATE_USER" -> {
+                    requireRole(request, "ADMIN");
+                    yield SocketResponse.ok(toUserPayload(server.getUserController().updateUser(
+                            request.getUsername(),
+                            request.getFullName(),
+                            request.getPassword()
+                    )));
+                }
+                case "DELETE_USER" -> {
+                    requireRole(request, "ADMIN");
+                    server.getUserController().deleteUser(request.getUsername());
+                    SessionRegistry.invalidateUser(request.getUsername());
+                    yield SocketResponse.ok(null);
                 }
                 case "GET_AUCTIONS_FOR_SELLER" -> SocketResponse.ok(server.getAuctionController().getAuctionsForSeller(request.getUsername()).stream().map(this::toAuctionPayload).toList());
                 case "GET_AUCTIONS_FOR_BIDDER" -> SocketResponse.ok(server.getAuctionController().getAuctionsForBidder(request.getUsername()).stream().map(this::toAuctionPayload).toList());
                 case "GET_WON_AUCTIONS" -> SocketResponse.ok(server.getAuctionController().getWonAuctions(request.getUsername()).stream().map(this::toAuctionPayload).toList());
                 case "CREATE_AUCTION" -> SocketResponse.ok(toAuctionPayload(server.getAuctionController().createAuction(
-                        request.getUsername(),
+                        requireRole(request, "SELLER").getUsername(),
                         request.getTitle(),
                         request.getCategory(),
                         request.getDescription(),
@@ -47,7 +66,7 @@ public class MessageRouter {
                 )));
                 case "UPDATE_AUCTION" -> SocketResponse.ok(toAuctionPayload(server.getAuctionController().updateAuction(
                         request.getAuctionId(),
-                        request.getActorUsername(),
+                        requireRole(request, "SELLER").getUsername(),
                         request.getTitle(),
                         request.getCategory(),
                         request.getDescription(),
@@ -57,56 +76,56 @@ public class MessageRouter {
                 )));
                 case "PLACE_BID" -> SocketResponse.ok(toAuctionPayload(server.getAuctionController().placeBid(
                         request.getAuctionId(),
-                        request.getActorUsername(),
+                        requireRole(request, "BIDDER").getUsername(),
                         request.getAmount()
                 )));
                 case "ENABLE_AUTO_BID" -> SocketResponse.ok(toAuctionPayload(server.getAutoBidController().enableAutoBid(
                         request.getAuctionId(),
-                        request.getActorUsername(),
+                        requireRole(request, "BIDDER").getUsername(),
                         request.getMaxAmount(),
                         request.getIncrementStep()
                 )));
                 case "SUBMIT_TOP_UP" -> SocketResponse.ok(toTopUpRequestPayload(server.getUserController().submitTopUpRequest(
-                        request.getActorUsername(),
+                        authenticatedUser(request).getUsername(),
                         request.getAmount(),
                         request.getBankName(),
                         request.getAccountName(),
                         request.getAccountNumber()
                 )));
                 case "APPROVE_TOP_UP" -> {
-                    requireAdmin(request.getActorUsername());
-                    server.getUserController().approveTopUpRequest(request.getRequestId(), request.getActorUsername());
-                    yield SocketResponse.ok(toUserPayload(findUser(request.getActorUsername())));
+                    User admin = requireRole(request, "ADMIN");
+                    server.getUserController().approveTopUpRequest(request.getRequestId(), admin.getUsername());
+                    yield SocketResponse.ok(toUserPayload(findUser(admin.getUsername())));
                 }
                 case "GET_TOP_UP_REQUESTS" -> {
-                    requireAdmin(request.getActorUsername());
+                    requireRole(request, "ADMIN");
                     yield SocketResponse.ok(server.getTopUpRequestsDirect().stream().map(this::toTopUpRequestPayload).toList());
                 }
                 case "PAY_AUCTION" -> SocketResponse.ok(toAuctionPayload(server.getAuctionController().payAuction(
                         request.getAuctionId(),
-                        request.getActorUsername()
+                        requireRole(request, "BIDDER").getUsername()
                 )));
                 case "CANCEL_AUCTION" -> SocketResponse.ok(toAuctionPayload(server.getAuctionController().cancelAuction(
                         request.getAuctionId(),
-                        request.getActorUsername()
+                        requireRole(request, "SELLER").getUsername()
                 )));
                 case "DELETE_AUCTION" -> {
-                    server.getAuctionController().deleteAuction(request.getAuctionId(), request.getActorUsername());
+                    server.getAuctionController().deleteAuction(request.getAuctionId(), requireRole(request, "SELLER").getUsername());
                     yield SocketResponse.ok(null);
                 }
                 case "GET_NOTIFICATIONS" -> {
-                    requireAdmin(request.getActorUsername());
+                    requireRole(request, "ADMIN");
                     yield SocketResponse.ok(server.getNotificationsDirect().stream().map(this::toNotificationPayload).toList());
                 }
-                case "GET_NOTIFICATIONS_FOR_USER" -> SocketResponse.ok(server.getNotificationsForUser(request.getActorUsername()).stream()
+                case "GET_NOTIFICATIONS_FOR_USER" -> SocketResponse.ok(server.getNotificationsForUser(authenticatedUser(request).getUsername()).stream()
                         .map(this::toNotificationPayload)
                         .toList());
                 case "GET_PAYMENTS" -> {
-                    requireAdmin(request.getActorUsername());
+                    requireRole(request, "ADMIN");
                     yield SocketResponse.ok(server.getPaymentsDirect().stream().map(this::toPaymentPayload).toList());
                 }
                 case "GET_TRANSACTIONS" -> {
-                    requireAdmin(request.getActorUsername());
+                    requireRole(request, "ADMIN");
                     yield SocketResponse.ok(server.getTransactionsDirect().stream().map(this::toTransactionPayload).toList());
                 }
                 default -> SocketResponse.error("Action khong duoc ho tro: " + request.getAction());
@@ -120,7 +139,7 @@ public class MessageRouter {
 
     private void syncForAction(String action) {
         switch (action) {
-            case "LOGIN", "REGISTER" -> server.reloadUsers();
+            case "LOGIN", "REGISTER", "LOGOUT" -> server.reloadUsers();
             case "GET_AUCTIONS", "GET_AUCTION_BY_ID", "SEARCH_AUCTIONS", "GET_AUCTIONS_FOR_SELLER",
                     "GET_AUCTIONS_FOR_BIDDER", "GET_WON_AUCTIONS" -> server.reloadAuctions();
             case "CREATE_AUCTION", "UPDATE_AUCTION", "DELETE_AUCTION", "PLACE_BID", "ENABLE_AUTO_BID", "PAY_AUCTION", "CANCEL_AUCTION" -> {
@@ -131,6 +150,7 @@ public class MessageRouter {
                 server.reloadTopUpRequests();
                 server.reloadUsers();
             }
+            case "UPDATE_USER", "DELETE_USER" -> server.reloadUsers();
             case "GET_CURRENT_USER", "GET_NOTIFICATIONS_FOR_USER", "GET_TOP_UP_REQUESTS", "GET_USERS" -> {
                 server.processApprovedTopUpCredits();
             }
@@ -140,11 +160,17 @@ public class MessageRouter {
         }
     }
 
-    private void requireAdmin(String username) {
-        User user = findUser(username);
-        if (!"ADMIN".equalsIgnoreCase(user.getRole())) {
-            throw new server.exception.AuthorizationException("Chi admin moi duoc truy cap chuc nang nay.");
+    private User requireRole(SocketRequest request, String role) {
+        User user = authenticatedUser(request);
+        if (!role.equalsIgnoreCase(user.getRole())) {
+            throw new server.exception.AuthorizationException("Tai khoan khong co quyen thuc hien thao tac nay.");
         }
+        return user;
+    }
+
+    private User authenticatedUser(SocketRequest request) {
+        String username = SessionRegistry.requireUsername(request.getSessionToken());
+        return findUser(username);
     }
 
     private User findUser(String username) {
@@ -156,13 +182,18 @@ public class MessageRouter {
     }
 
     private Map<String, Object> toUserPayload(User user) {
+        return toUserPayload(user, null);
+    }
+
+    private Map<String, Object> toUserPayload(User user, String sessionToken) {
         return mapOf(
                 "id", user.getId(),
                 "username", user.getUsername(),
                 "password", null,
                 "role", UserRole.valueOf(user.getRole()).name(),
                 "fullName", user.getFullName(),
-                "walletBalance", user.getWalletBalance()
+                "walletBalance", user.getWalletBalance(),
+                "sessionToken", sessionToken
         );
     }
 

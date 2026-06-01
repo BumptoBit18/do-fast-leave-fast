@@ -128,6 +128,32 @@ public class UserController {
         return server.getTopUpRequests();
     }
 
+    public synchronized User updateUser(String username, String fullName, String password) {
+        User user = findUser(username);
+        if (fullName == null || fullName.isBlank()) {
+            throw new IllegalArgumentException("Ho ten khong duoc de trong.");
+        }
+        if (password != null && !password.isBlank() && password.length() < 6) {
+            throw new IllegalArgumentException("Password phai tu 6 ky tu tro len.");
+        }
+        user.setFullName(fullName.trim());
+        if (password != null && !password.isBlank()) {
+            user.setPassword(password);
+        }
+        server.updateUserProfile(user);
+        appendTransactionSafely("UPDATE_USER", "ADMIN", user.getId(), "Cap nhat tai khoan " + username, 0);
+        return user;
+    }
+
+    public synchronized void deleteUser(String username) {
+        User user = findUser(username);
+        if ("ADMIN".equalsIgnoreCase(user.getRole())) {
+            throw new AuthorizationException("Khong the xoa tai khoan admin.");
+        }
+        server.deleteUser(username);
+        appendTransactionSafely("DELETE_USER", "ADMIN", user.getId(), "Xoa tai khoan " + username, 0);
+    }
+
     public synchronized void processApprovedTopUpCredits() {
         LocalDateTime now = LocalDateTime.now();
         List<TopUpRequestRecord> requests = server.getTopUpRequests();
@@ -206,5 +232,12 @@ public class UserController {
 
     private String buildId() {
         return "U-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase(Locale.ROOT);
+    }
+
+    private User findUser(String username) {
+        return server.getUsers().stream()
+                .filter(candidate -> candidate.getUsername().equalsIgnoreCase(username))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Khong tim thay nguoi dung " + username));
     }
 }

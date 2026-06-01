@@ -18,6 +18,8 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -30,6 +32,7 @@ import network.ServerConnection;
 import shared.socket.RealtimeEvent;
 import ui.AppUi;
 import util.AlertUtil;
+import util.ProductImageUtil;
 import util.SceneManager;
 
 public class AuctionDetailController implements MessageListener {
@@ -137,11 +140,17 @@ public class AuctionDetailController implements MessageListener {
         Label description = new Label(auctionLot.getDescription());
         description.setWrapText(true);
 
-        Label imageHint = new Label("Mo ta anh: " + auctionLot.getImageHint());
-        imageHint.setWrapText(true);
-        imageHint.getStyleClass().add("muted-label");
+        Image image = ProductImageUtil.decode(auctionLot.getImageHint());
+        if (image != null) {
+            ImageView productImage = new ImageView(image);
+            productImage.setFitWidth(360);
+            productImage.setFitHeight(240);
+            productImage.setPreserveRatio(true);
+            productImage.setSmooth(true);
+            card.getChildren().add(productImage);
+        }
 
-        card.getChildren().addAll(title, meta, price, status, leader, antiSnipe, imageHint, description);
+        card.getChildren().addAll(title, meta, price, status, leader, antiSnipe, description);
         return card;
     }
 

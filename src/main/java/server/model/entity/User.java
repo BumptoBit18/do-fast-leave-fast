@@ -6,7 +6,7 @@ public abstract class User extends Entity {
     private final String username;
     private String password;
     private final String role;
-    private final String fullName;
+    private String fullName;
     private double walletBalance;
 
     protected User(String id, String username, String password, String role, String fullName, double walletBalance) {
@@ -15,7 +15,7 @@ public abstract class User extends Entity {
         this.password = password;
         this.role = role;
         this.fullName = fullName;
-        this.walletBalance = walletBalance + 100000000;
+        this.walletBalance = walletBalance;
     }
 
     public String getUsername() {
@@ -38,15 +38,28 @@ public abstract class User extends Entity {
         return fullName;
     }
 
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
     public double getWalletBalance() {
         return walletBalance;
     }
 
     public void deposit(double amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("So tien nap phai lon hon 0.");
+        }
         walletBalance += amount;
     }
 
     public void withdraw(double amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("So tien rut phai lon hon 0.");
+        }
+        if (amount > walletBalance) {
+            throw new IllegalArgumentException("So du khong du.");
+        }
         walletBalance -= amount;
     }
 }

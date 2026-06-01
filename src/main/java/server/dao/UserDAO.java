@@ -148,6 +148,39 @@ public class UserDAO {
         }
     }
 
+    public void updateProfile(User user) {
+        DatabaseManager.initialize();
+        String sql = """
+                update users
+                set password = ?,
+                    full_name = ?
+                where lower(username) = lower(?)
+                """;
+
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, user.getPassword());
+            statement.setString(2, user.getFullName());
+            statement.setString(3, user.getUsername());
+            statement.executeUpdate();
+        } catch (Exception ex) {
+            throw new IllegalStateException("Khong the cap nhat user trong PostgreSQL.", ex);
+        }
+    }
+
+    public void deleteByUsername(String username) {
+        DatabaseManager.initialize();
+        String sql = "delete from users where lower(username) = lower(?)";
+
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, username);
+            statement.executeUpdate();
+        } catch (Exception ex) {
+            throw new IllegalStateException("Khong the xoa user khoi PostgreSQL.", ex);
+        }
+    }
+
     public void saveAll(List<User> users) {
         DatabaseManager.initialize();
         String deleteSql = "delete from users";

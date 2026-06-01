@@ -53,7 +53,14 @@ public class ServerHandler implements Runnable {
     }
 
     private void handleSubscription(Socket client, BufferedReader input, BufferedWriter output, SocketRequest request) throws Exception {
-        ClientSubscriptionRegistry.register(request.getActorUsername(), client, output);
+        String username;
+        try {
+            username = SessionRegistry.requireUsername(request.getSessionToken());
+        } catch (server.exception.AuthenticationException ex) {
+            writeResponse(output, SocketResponse.error(ex.getMessage()));
+            return;
+        }
+        ClientSubscriptionRegistry.register(username, client, output);
         writeResponse(output, SocketResponse.ok("Subscribed", null));
 
         while (!client.isClosed()) {

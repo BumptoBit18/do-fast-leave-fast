@@ -33,7 +33,7 @@ class ConcurrentBidTest {
         Auction auction = new Auction("AUC-5", "seller", item);
 
         int bidCount = 20;
-        ExecutorService executor = Executors.newFixedThreadPool(4);
+        ExecutorService executor = Executors.newFixedThreadPool(bidCount);
         CountDownLatch ready = new CountDownLatch(bidCount);
         CountDownLatch start = new CountDownLatch(1);
         CountDownLatch done = new CountDownLatch(bidCount);
@@ -45,16 +45,14 @@ class ConcurrentBidTest {
                 try {
                     ready.countDown();
                     start.await(5, TimeUnit.SECONDS);
-                    synchronized (auction) {
-                        auction.addBid(new BidTransaction(
-                                "BID",
-                                "bidder-" + bidIndex,
-                                auction.getId(),
-                                "Concurrent bid",
-                                7_100_000 + (bidIndex * 100_000L),
-                                LocalDateTime.now()
-                        ));
-                    }
+                    auction.addBid(new BidTransaction(
+                            "BID",
+                            "bidder-" + bidIndex,
+                            auction.getId(),
+                            "Concurrent bid",
+                            7_100_000 + (bidIndex * 100_000L),
+                            LocalDateTime.now()
+                    ));
                 } catch (Throwable ex) {
                     synchronized (failures) {
                         failures.add(ex);

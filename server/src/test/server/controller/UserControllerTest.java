@@ -6,6 +6,7 @@ import server.model.entity.Seller;
 import server.model.entity.User;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class UserControllerTest {
     @Test
@@ -18,5 +19,16 @@ class UserControllerTest {
 
         assertEquals(1_250_000, bidder.getWalletBalance());
         assertEquals(400_000, seller.getWalletBalance());
+    }
+
+    @Test
+    void shouldRejectInvalidWalletOperations() {
+        User bidder = new Bidder("U-3", "bidder", "bidder123", "Bidder", 1_000_000);
+
+        assertThrows(IllegalArgumentException.class, () -> bidder.deposit(0));
+        assertThrows(IllegalArgumentException.class, () -> bidder.deposit(-100_000));
+        assertThrows(IllegalArgumentException.class, () -> bidder.withdraw(0));
+        assertThrows(IllegalArgumentException.class, () -> bidder.withdraw(1_100_000));
+        assertEquals(1_000_000, bidder.getWalletBalance());
     }
 }

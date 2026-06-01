@@ -39,6 +39,7 @@ public class ServerConnection implements MessageListener {
     private final ServerEventClient eventClient;
     private final List<MessageListener> messageListeners = new CopyOnWriteArrayList<>();
     private AppUser currentUser;
+    private String sessionToken;
 
     public ServerConnection() {
         this.serverHost = readValue("auction.server.host", "AUCTION_SERVER_HOST", "localhost");
@@ -73,8 +74,10 @@ public class ServerConnection implements MessageListener {
         request.setUsername(username);
         request.setPassword(password);
         request.setRole(role.name());
-        currentUser = mapUser(sendObject(request));
-        eventClient.connect(currentUser.getUsername());
+        Map<String, Object> payload = sendObject(request);
+        currentUser = mapUser(payload);
+        sessionToken = stringValue(payload.get("sessionToken"));
+        eventClient.connect(currentUser.getUsername(), sessionToken);
         return currentUser;
     }
 
@@ -89,7 +92,17 @@ public class ServerConnection implements MessageListener {
     }
 
     public void logout() {
+        if (sessionToken != null) {
+            SocketRequest request = new SocketRequest();
+            request.setAction("LOGOUT");
+            try {
+                sendInternal(request);
+            } catch (Exception ignored) {
+                // Local logout must still work if the server has already stopped.
+            }
+        }
         currentUser = null;
+        sessionToken = null;
         eventClient.disconnect();
     }
 
@@ -130,6 +143,22 @@ public class ServerConnection implements MessageListener {
         request.setAction("GET_USERS");
         setActorIfLoggedIn(request);
         return mapUsers(sendObjectList(request));
+    }
+
+    public AppUser updateUser(String username, String fullName, String password) {
+        SocketRequest request = new SocketRequest();
+        request.setAction("UPDATE_USER");
+        request.setUsername(username);
+        request.setFullName(fullName);
+        request.setPassword(password);
+        return mapUser(sendObject(request));
+    }
+
+    public void deleteUser(String username) {
+        SocketRequest request = new SocketRequest();
+        request.setAction("DELETE_USER");
+        request.setUsername(username);
+        sendInternal(request);
     }
 
     public List<AuctionLot> getAuctionsForSeller(String sellerUsername) {
@@ -309,6 +338,9 @@ public class ServerConnection implements MessageListener {
 
     @SuppressWarnings("unchecked")
     private SocketResponse sendInternal(SocketRequest request) {
+        if (request.getSessionToken() == null && sessionToken != null) {
+            request.setSessionToken(sessionToken);
+        }
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(serverHost, serverPort), DEFAULT_CONNECT_TIMEOUT_MS);
             socket.setSoTimeout(DEFAULT_READ_TIMEOUT_MS);
@@ -339,8 +371,8 @@ public class ServerConnection implements MessageListener {
             throw ex;
         } catch (Exception ex) {
             throw new IllegalStateException(
-                    "Khong ket noi duoc toi auction server %s:%d. Hay kiem tra server da chay va client dang tro dung host/port."
-                            .formatted(serverHost, serverPort),
+                    "Khong ket noi duoc toi auction server %s:%d. Chi tiet: %s"
+                            .formatted(serverHost, serverPort, ex.getMessage()),
                     ex
             );
         }

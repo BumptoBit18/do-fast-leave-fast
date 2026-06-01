@@ -255,6 +255,17 @@ public class ServerMain {
         ClientSubscriptionRegistry.broadcast(new RealtimeEvent("USER_UPDATED", user.getUsername(), null));
     }
 
+    public synchronized void updateUserProfile(User user) {
+        userDAO.updateProfile(user);
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("USER_UPDATED", "ALL", null));
+    }
+
+    public synchronized void deleteUser(String username) {
+        users.removeIf(user -> user.getUsername().equalsIgnoreCase(username));
+        userDAO.deleteByUsername(username);
+        ClientSubscriptionRegistry.broadcast(new RealtimeEvent("USER_UPDATED", "ALL", null));
+    }
+
     public synchronized void saveAuctions(List<Auction> values) {
         auctions.clear();
         auctions.addAll(values);
@@ -401,7 +412,7 @@ public class ServerMain {
         notifications.clear();
         topUpRequests.clear();
 
-        
+
         users.add(new Seller("U-002", "seller", "seller123", "Linh Seller", 15_000_000));
         users.add(new Bidder("U-003", "bidder", "bidder123", "Minh Bidder", 120_000_000));
         users.add(new Seller("U-004", "seller2", "seller123", "An Seller", 18_000_000));

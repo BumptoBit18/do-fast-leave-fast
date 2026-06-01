@@ -37,6 +37,7 @@ client\java\network\ServerConnection.java
 client\java\network\ServerEventClient.java
 client\java\ui\AppUi.java
 client\java\util\AlertUtil.java
+client\java\util\ProductImageUtil.java
 client\java\util\SceneManager.java
 src\main\java\server\ServerLauncherMain.java
 src\main\java\server\ServerMain.java
@@ -56,6 +57,7 @@ src\main\java\server\exception\AuthenticationException.java
 src\main\java\server\exception\AuthorizationException.java
 src\main\java\server\exception\InvalidBidException.java
 src\main\java\server\model\Auction.java
+src\main\java\server\model\AuctionStatus.java
 src\main\java\server\model\AutoBid.java
 src\main\java\server\model\BidTransaction.java
 src\main\java\server\model\NotificationRecord.java
@@ -74,6 +76,7 @@ src\main\java\server\model\item\Vehicle.java
 src\main\java\server\network\ClientSubscriptionRegistry.java
 src\main\java\server\network\MessageRouter.java
 src\main\java\server\network\ServerHandler.java
+src\main\java\server\network\SessionRegistry.java
 src\main\java\server\network\SocketAuctionServer.java
 src\main\java\server\util\DatabaseManager.java
 src\main\java\server\util\ObjectFileStore.java

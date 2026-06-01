@@ -1,6 +1,7 @@
 src\test\java\app\model\AuctionLotTest.java
 src\test\java\diagnostics\ServerMainProbe.java
 src\test\java\server\controller\ItemControllerTest.java
+src\test\java\server\network\SessionRegistryTest.java
 src\test\java\shared\json\JsonCodecTest.java
 server\src\test\server\controller\AuctionControllerTest.java
 server\src\test\server\controller\AutoBidTest.java

@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 
 public class Bid implements Serializable {
     private static final long serialVersionUID = 1L;
-    
+
     private String bidderUsername; // Người đặt giá
     private double amount;         // Giá đặt
     private LocalDateTime time;    // Thời gian đặt

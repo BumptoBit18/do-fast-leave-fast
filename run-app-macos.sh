@@ -168,6 +168,7 @@ fi
 rm -f "$SOURCES_FILE"
 
 exec java "${JAVA_ARGS[@]}" \
+  --enable-native-access=javafx.graphics \
   --module-path "$MODULE_PATH" \
   --add-modules javafx.controls,javafx.fxml \
   -cp "$CLASS_PATH" \

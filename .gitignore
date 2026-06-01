@@ -3,3 +3,4 @@ target/
 .java-prefs/
 sources.txt
 compile_sources.txt
+config/database.properties
