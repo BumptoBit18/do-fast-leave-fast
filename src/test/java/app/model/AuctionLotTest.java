@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AuctionLotTest {
@@ -51,5 +52,83 @@ class AuctionLotTest {
 
         assertTrue(lot.isAntiSnipeTriggered());
         assertTrue(lot.isPaid());
+    }
+
+    @Test
+    void shouldReplaceAutoBidRuleCaseInsensitivelyAndTrackCloseNotification() {
+        AuctionLot lot = new AuctionLot(
+                "LOT-3",
+                "seller",
+                "Watch",
+                "Luxury",
+                "Mint condition",
+                5000000,
+                LocalDateTime.now().plusHours(5),
+                "gold"
+        );
+
+        lot.addAutoBidRule(new AutoBidRule("bidderA", 5500000, 100000));
+        lot.addAutoBidRule(new AutoBidRule("BIDDERA", 6000000, 200000));
+        lot.markCloseNotified();
+
+        assertEquals(1, lot.getAutoBidRules().size());
+        assertEquals("BIDDERA", lot.getAutoBidRules().get(0).getBidderUsername());
+        assertEquals(6000000, lot.getAutoBidRules().get(0).getMaxAmount());
+        assertEquals(200000, lot.getAutoBidRules().get(0).getIncrementStep());
+        assertTrue(lot.isCloseNotified());
+    }
+
+    @Test
+    void shouldReportOpenFinishedAndCancelledStates() {
+        AuctionLot openLot = new AuctionLot(
+                "LOT-4",
+                "seller",
+                "Camera",
+                "Electronics",
+                "Compact",
+                3000000,
+                LocalDateTime.now().plusHours(1),
+                ""
+        );
+        AuctionLot finishedLot = new AuctionLot(
+                "LOT-5",
+                "seller",
+                "Chair",
+                "Furniture",
+                "Vintage",
+                1000000,
+                LocalDateTime.now().minusMinutes(1),
+                ""
+        );
+
+        assertEquals("Open", openLot.getStatusLabel());
+        assertFalse(openLot.isClosed());
+        assertEquals("Finished", finishedLot.getStatusLabel());
+        assertTrue(finishedLot.isClosed());
+        assertEquals("Da ket thuc", finishedLot.getTimeLeftLabel());
+
+        openLot.cancel();
+        assertTrue(openLot.isCancelled());
+        assertEquals("Cancelled", openLot.getStatusLabel());
+        assertEquals("Da huy", openLot.getTimeLeftLabel());
+        assertTrue(openLot.isClosed());
+    }
+
+    @Test
+    void shouldExposeHighestBidAndMinimumBidForEmptyLot() {
+        AuctionLot lot = new AuctionLot(
+                "LOT-6",
+                "seller",
+                "Book",
+                "Collectible",
+                "Signed copy",
+                900000,
+                LocalDateTime.now().plusHours(3),
+                ""
+        );
+
+        assertNull(lot.getHighestBid());
+        assertEquals("Chua co", lot.getHighestBidder());
+        assertEquals(1000000, lot.getMinimumBid());
     }
 }
