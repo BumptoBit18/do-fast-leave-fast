@@ -155,7 +155,14 @@ cd do-fast-leave-fast
 
 ### Buoc 2. Cau hinh database
 
-- Tao database PostgreSQL (moi he dieu hanh co cach tao database khac nhau)
+- Tai PostgreSQL phu hop voi he dieu hanh may tinh: 
+  - Mo phan mem `pgAdmin` (pham mem duoc cai san kem theo PostgreSQL) .
+  - O cot ben trai `Browser`, mo rong cay thu muc `Servers -> PostgreSQL` .
+  - Nhap mat khau (neu duoc yeu cau) de ket noi voi server.
+  - Nhap chuot phai vao much Database.
+  - Chon `Create -> Database...`
+  - Mot cua so hien ra -> O tab `General` nhap ten database muon tao vao o Database
+  - Nhan save Database se xuat hien o thanh ben trai 
 - Sua cau hinh db trong file `config/database.properties`
 
 ### Buoc 3. Tai dependencies
