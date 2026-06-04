@@ -155,9 +155,8 @@ cd do-fast-leave-fast
 
 ### Buoc 2. Cau hinh database
 
-- Tao database PostgreSQL
-- Tao file `config/database.properties`
-- Dien thong tin ket noi database vao file cau hinh
+- Tao database PostgreSQL (moi he dieu hanh co cach tao database khac nhau)
+- Sua cau hinh db trong file `config/database.properties`
 
 ### Buoc 3. Tai dependencies
 
@@ -229,7 +228,3 @@ Hien tai repo da co CI, chua co workflow CD/deploy rieng.
 
 - Bao cao PDF va video demo: [Google Drive](https://drive.google.com/drive/folders/12W6M35Lm4njqpmqIvMl3RBiqyBoz0HHV?usp=sharing)
 
-## 9. Ghi chu
-
-- Trong moi truong hien tai, minh da doi chieu cau lenh voi cac script Windows, Linux va macOS co san trong repo.
-- Minh khong the thuc thi truc tiep Linux/macOS trong workspace Windows nay, nen README duoc viet theo dung script hien co cua du an.
