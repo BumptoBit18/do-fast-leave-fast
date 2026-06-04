@@ -140,4 +140,46 @@ class UserControllerTest {
         assertEquals("CREDITED", request.getStatus());
         assertTrue(transactions.stream().anyMatch(item -> item.getType().equals("TOP_UP_CREDITED")));
     }
+
+    @Test
+    void shouldWithdrawWalletImmediatelyAndLogTransaction() {
+        ArrayList<User> users = new ArrayList<>();
+        users.add(new Bidder("U-1", "bidder", "bidder123", "Bidder", 2_500_000));
+        ArrayList<BidTransaction> transactions = new ArrayList<>();
+        ArrayList<NotificationRecord> notifications = new ArrayList<>();
+        UserController controller = new UserController(ControllerTestSupport.newServer(
+                users,
+                new ArrayList<>(),
+                transactions,
+                new ArrayList<>(),
+                notifications,
+                new ArrayList<>()
+        ));
+
+        User updated = controller.withdrawWallet("bidder", 700_000, "VCB", "123456789");
+
+        assertEquals(1_800_000, updated.getWalletBalance());
+        assertEquals(1_800_000, users.getFirst().getWalletBalance());
+        assertTrue(transactions.stream().anyMatch(item -> item.getType().equals("WITHDRAW")));
+        assertTrue(notifications.stream().anyMatch(item -> item.getTitle().contains("Rut tien")));
+    }
+
+    @Test
+    void shouldRejectInvalidWithdrawRequests() {
+        ArrayList<User> users = new ArrayList<>();
+        users.add(new Bidder("U-1", "bidder", "bidder123", "Bidder", 300_000));
+        UserController controller = new UserController(ControllerTestSupport.newServer(
+                users,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>()
+        ));
+
+        assertThrows(IllegalArgumentException.class, () -> controller.withdrawWallet("bidder", 0, "VCB", "123"));
+        assertThrows(IllegalArgumentException.class, () -> controller.withdrawWallet("bidder", 100_000, "", "123"));
+        assertThrows(IllegalArgumentException.class, () -> controller.withdrawWallet("bidder", 100_000, "VCB", ""));
+        assertThrows(IllegalArgumentException.class, () -> controller.withdrawWallet("bidder", 500_000, "VCB", "123"));
+    }
 }

@@ -61,6 +61,40 @@ public class UserController {
         throw new IllegalStateException("Nap tien vao vi phai cho admin xac nhan.");
     }
 
+    public synchronized User withdrawWallet(
+            String username,
+            double amount,
+            String bankName,
+            String accountNumber
+    ) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("So tien rut phai lon hon 0.");
+        }
+        if (bankName == null || bankName.isBlank()) {
+            throw new IllegalArgumentException("Ten ngan hang khong duoc de trong.");
+        }
+        if (accountNumber == null || accountNumber.isBlank()) {
+            throw new IllegalArgumentException("So tai khoan khong duoc de trong.");
+        }
+
+        User user = findUser(username);
+        user.withdraw(amount);
+        server.updateUserWallet(user);
+        appendTransactionSafely(
+                "WITHDRAW",
+                username,
+                user.getId(),
+                "Rut tien ve " + bankName.trim() + " - " + accountNumber.trim(),
+                amount
+        );
+        appendNotificationSafely(
+                username,
+                "Rut tien thanh cong",
+                "Ban da rut " + amount + " ve tai khoan " + accountNumber.trim() + " tai " + bankName.trim() + "."
+        );
+        return user;
+    }
+
     public synchronized TopUpRequestRecord submitTopUpRequest(
             String username,
             double amount,

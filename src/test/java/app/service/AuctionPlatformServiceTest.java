@@ -266,6 +266,7 @@ class AuctionPlatformServiceTest {
         connection.auctionsForBidder = List.of(bidderLot);
         connection.wonAuctions = List.of(wonLot);
         connection.topUpWalletResult = new AppUser("U-3", "bidder", "pw", UserRole.BIDDER, "Bidder", 3_500_000);
+        connection.withdrawWalletResult = new AppUser("U-3", "bidder", "pw", UserRole.BIDDER, "Bidder", 2_900_000);
         connection.submitTopUpRequestResult = topUpRecord;
 
         AuctionPlatformService service = new AuctionPlatformService(connection);
@@ -282,6 +283,9 @@ class AuctionPlatformServiceTest {
 
         assertEquals(3_500_000, service.topUpWallet(1_500_000).getWalletBalance());
         assertEquals(1, connection.topUpWalletCalls);
+
+        assertEquals(2_900_000, service.withdrawWallet(600_000, "ACB", "456").getWalletBalance());
+        assertEquals(1, connection.withdrawWalletCalls);
 
         assertEquals("TOP-2", service.submitTopUpRequest(1_500_000, "ACB", "Bidder", "456").getId());
         assertEquals(1, connection.submitTopUpRequestCalls);
@@ -307,6 +311,7 @@ class AuctionPlatformServiceTest {
         private AppUser updateUserResult;
         private AppUser approveTopUpRequestResult;
         private AppUser topUpWalletResult;
+        private AppUser withdrawWalletResult;
         private AuctionLot createAuctionResult;
         private AuctionLot updateAuctionResult;
         private AuctionLot placeBidResult;
@@ -338,6 +343,7 @@ class AuctionPlatformServiceTest {
         private int cancelAuctionCalls;
         private int deleteAuctionCalls;
         private int topUpWalletCalls;
+        private int withdrawWalletCalls;
         private int submitTopUpRequestCalls;
         private int updateUserCalls;
         private int deleteUserCalls;
@@ -461,6 +467,12 @@ class AuctionPlatformServiceTest {
         public AppUser topUpWallet(double amount) {
             topUpWalletCalls++;
             return topUpWalletResult;
+        }
+
+        @Override
+        public AppUser withdrawWallet(double amount, String bankName, String accountNumber) {
+            withdrawWalletCalls++;
+            return withdrawWalletResult;
         }
 
         @Override

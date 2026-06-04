@@ -156,7 +156,51 @@ public class WalletController implements MessageListener {
         );
         HBox.setHgrow(transferPanel, Priority.ALWAYS);
 
-        HBox body = new HBox(20, accountPanel, transferPanel);
+        TextField withdrawAmountField = new TextField();
+        withdrawAmountField.setPromptText("Vi du: 200000");
+
+        TextField withdrawBankField = new TextField();
+        withdrawBankField.setPromptText("Vi du: Vietcombank");
+
+        TextField withdrawAccountField = new TextField();
+        withdrawAccountField.setPromptText("Vi du: 0123456789");
+
+        Button withdrawButton = new Button("Rut tien ngay");
+        withdrawButton.getStyleClass().add("primary-button");
+        withdrawButton.setMaxWidth(Double.MAX_VALUE);
+        withdrawButton.setOnAction(event -> {
+            try {
+                double amount = Double.parseDouble(withdrawAmountField.getText().trim());
+                AppUser updatedUser = service.withdrawWallet(
+                        amount,
+                        withdrawBankField.getText().trim(),
+                        withdrawAccountField.getText().trim()
+                );
+                AlertUtil.info("Rut tien thanh cong", "So du moi: " + service.formatCurrency(updatedUser.getWalletBalance()));
+                refreshWalletView(false);
+                withdrawAmountField.clear();
+            } catch (NumberFormatException ex) {
+                AlertUtil.error("So tien khong hop le", "Hay nhap so tien can rut bang so.");
+            } catch (Exception ex) {
+                AlertUtil.error("Khong the rut tien", ex.getMessage());
+            }
+        });
+
+        VBox withdrawPanel = AppUi.panelCard(
+                "Rut tien khoi vi",
+                "Tien se bi tru ngay sau khi gui lenh rut.",
+                AppUi.fieldGroup("So tien muon rut", "Nhap dung so tien can chuyen ra ngan hang.", withdrawAmountField),
+                AppUi.fieldGroup("Ten ngan hang", "Nhap ten ngan hang nhan tien.", withdrawBankField),
+                AppUi.fieldGroup("So tai khoan", "Nhap so tai khoan nhan tien.", withdrawAccountField),
+                withdrawButton
+        );
+        HBox.setHgrow(withdrawPanel, Priority.ALWAYS);
+
+        VBox actionColumn = new VBox(20, transferPanel, withdrawPanel);
+        actionColumn.setAlignment(Pos.TOP_LEFT);
+        HBox.setHgrow(actionColumn, Priority.ALWAYS);
+
+        HBox body = new HBox(20, accountPanel, actionColumn);
         body.setAlignment(Pos.TOP_LEFT);
 
         refreshButton.setOnAction(event -> refreshWalletView(true));

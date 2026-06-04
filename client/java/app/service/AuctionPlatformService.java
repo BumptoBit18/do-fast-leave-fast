@@ -234,6 +234,14 @@ public class AuctionPlatformService {
         return connection.topUpWallet(amount);
     }
 
+    public AppUser withdrawWallet(double amount, String bankName, String accountNumber) {
+        AppUser user = connection.withdrawWallet(amount, bankName, accountNumber);
+        cachedCurrentUser = user;
+        currentUserFetchedAt = System.currentTimeMillis();
+        invalidateCollections();
+        return user;
+    }
+
     public TopUpRequestRecord submitTopUpRequest(double amount, String bankName, String accountName, String accountNumber) {
         TopUpRequestRecord record = connection.submitTopUpRequest(amount, bankName, accountName, accountNumber);
         invalidateCollections();

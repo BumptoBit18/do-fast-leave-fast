@@ -92,6 +92,12 @@ public class MessageRouter {
                         request.getAccountName(),
                         request.getAccountNumber()
                 )));
+                case "WITHDRAW_WALLET" -> SocketResponse.ok(toUserPayload(server.getUserController().withdrawWallet(
+                        authenticatedUser(request).getUsername(),
+                        request.getAmount(),
+                        request.getBankName(),
+                        request.getAccountNumber()
+                )));
                 case "APPROVE_TOP_UP" -> {
                     User admin = requireRole(request, "ADMIN");
                     server.getUserController().approveTopUpRequest(request.getRequestId(), admin.getUsername());
@@ -146,7 +152,7 @@ public class MessageRouter {
                 server.reloadAuctions();
                 server.reloadUsers();
             }
-            case "SUBMIT_TOP_UP", "APPROVE_TOP_UP" -> {
+            case "SUBMIT_TOP_UP", "APPROVE_TOP_UP", "WITHDRAW_WALLET" -> {
                 server.reloadTopUpRequests();
                 server.reloadUsers();
             }

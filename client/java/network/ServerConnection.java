@@ -235,6 +235,18 @@ public class ServerConnection implements MessageListener {
         throw new IllegalStateException("Nap tien vao vi can admin xac nhan.");
     }
 
+    public AppUser withdrawWallet(double amount, String bankName, String accountNumber) {
+        ensureCurrentUser();
+        SocketRequest request = new SocketRequest();
+        request.setAction("WITHDRAW_WALLET");
+        request.setActorUsername(currentUser.getUsername());
+        request.setAmount(amount);
+        request.setBankName(bankName);
+        request.setAccountNumber(accountNumber);
+        currentUser = mapUser(sendObject(request));
+        return currentUser;
+    }
+
     public TopUpRequestRecord submitTopUpRequest(double amount, String bankName, String accountName, String accountNumber) {
         ensureCurrentUser();
         SocketRequest request = new SocketRequest();
