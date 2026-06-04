@@ -1,88 +1,235 @@
 # AuctionHub
 
-Ung dung dau gia JavaFX theo kien truc Client-Server.
+## 1. Mo ta bai toan va pham vi he thong
 
-## Chuc nang
+AuctionHub la he thong dau gia truc tuyen xay dung theo kien truc Client-Server. He thong ho tro nguoi ban tao va quan ly phien dau gia, nguoi mua tham gia dau gia theo thoi gian thuc, va quan tri vien giam sat nguoi dung, giao dich, thong bao va cac yeu cau nap tien.
 
-- Dang nhap theo 3 vai tro: Bidder, Seller, Admin
-- Dang ky tai khoan Bidder va Seller
-- CRUD phien dau gia cho Seller
-- Seller chon file anh san pham PNG, JPG, GIF hoac BMP toi da 2 MB
-- Dat gia realtime, auto-bidding va anti-sniping
-- Tu dong dong phien, xac dinh nguoi thang va thanh toan
-- Nap tien qua yeu cau cho Admin phe duyet
-- Admin quan ly user, giao dich, thanh toan va thong bao
-- Bieu do lich su gia realtime
+Pham vi he thong trong do an nay gom:
 
-## Kien truc
+- Client desktop JavaFX cho `Bidder`, `Seller`, `Admin`
+- Server Java xu ly nghiep vu va giao tiep voi database
+- Giao tiep Client-Server qua TCP socket
+- Luu tru du lieu bang PostgreSQL
+- Kiem thu va CI bang Maven + GitHub Actions
 
-- `client -> TCP socket JSON line protocol -> server -> PostgreSQL`
-- Server chay `server.ServerLauncherMain` va la noi duy nhat truy cap database
-- Client JavaFX dung controller theo huong MVC va nhan `RealtimeEvent` theo Observer Pattern
-- `ServerMain` dung Singleton Pattern
-- `ItemController` dung Factory Method de tao `Electronics`, `Vehicle`, `Art` va `GenericItem`
-- Auto-bidding dung `PriorityQueue` de uu tien rule co muc tran cao nhat
-- Login va dang ky dung FXML that; controller chi xu ly su kien va goi service
-- `data/*.dat` chi dung de migrate du lieu legacy khi database rong
+## 2. Cong nghe su dung, moi truong chay va yeu cau cai dat
 
-## Tai khoan mau
+### Cong nghe
 
-- `bidder / bidder123`
-- `seller / seller123`
-- `admin / admin`
+- Java 21
+- JavaFX 21.0.6
+- Maven
+- PostgreSQL
+- JUnit 5
+- JaCoCo
+- Checkstyle
+- GitHub Actions
+- Qodana
 
-## Chay tren Windows
+### Moi truong chay
 
-Neu da tao `config/database.properties`:
+- Windows: su dung `run-server.ps1`, `run-app.ps1`
+- Linux: su dung `run-server-linux.sh`, `run-app-linux.sh`
+- macOS: su dung `run-server-macos.sh`, `run-app-macos.sh`
+
+### Yeu cau cai dat
+
+- JDK 21
+- Maven 3.9+
+- PostgreSQL
+- Bien moi truong `JAVA_HOME` da duoc cau hinh
+- Maven dependencies da duoc tai ve trong thu muc `.m2`
+
+### Cau hinh database
+
+Tao file `config/database.properties` dua tren file mau `config/database.properties.example`, hoac cau hinh bang:
+
+- System properties `auction.db.*`
+- Bien moi truong `AUCTION_DB_*`
+
+Server la thanh phan duy nhat ket noi truc tiep voi database.
+
+## 3. Cau truc thu muc va cac module chinh
+
+```text
+do-fast-leave-fast/
+|-- client/                 # Ma nguon va tai nguyen giao dien client JavaFX
+|   |-- java/
+|   `-- resources/
+|-- src/main/java/          # Ma nguon dung chung va khoi dong client
+|-- server/                 # Thanh phan server, controller, DAO, model, network
+|-- config/                 # Cau hinh database, checkstyle, file cau hinh khac
+|-- data/                   # Du lieu legacy phuc vu migrate khi can
+|-- .github/workflows/      # CI va code quality workflow
+|-- run-server.ps1          # Script chay server tren Windows
+|-- run-app.ps1             # Script chay client tren Windows
+|-- run-server-linux.sh     # Script chay server tren Linux
+|-- run-app-linux.sh        # Script chay client tren Linux
+|-- run-server-macos.sh     # Script chay server tren macOS
+|-- run-app-macos.sh        # Script chay client tren macOS
+`-- pom.xml                 # Cau hinh Maven, test, coverage, checkstyle
+```
+
+## 4. Cau lenh dong lenh de chay chuong trinh
+
+Luu y:
+
+- Cac script duoi day da ton tai san trong repo cho Windows, Linux va macOS.
+- Trong moi he dieu hanh, can chay lenh tai thu muc goc cua du an `do-fast-leave-fast`.
+- Linux/macOS can cap quyen thuc thi cho file shell script truoc lan dau su dung.
+
+### Tai dependencies truoc khi chay
+
+```bash
+mvn dependency:go-offline
+```
+
+### Windows
+
+Chay Server:
 
 ```powershell
 .\run-server.ps1
 ```
 
-Mo terminal khac va chay client tren cung may:
+Chay Client:
 
 ```powershell
 .\run-app.ps1
 ```
 
-Neu dung ngrok TCP cho client tu may khac:
+Client ket noi toi server khac:
 
 ```powershell
-ngrok tcp 5050
-.\run-app.ps1 -ServerHost <host-ngrok> -Port <port-ngrok>
+.\run-app.ps1 -ServerHost <server-host> -Port 5050
 ```
 
-## Chay tren macOS / Linux
+### Linux
+
+Cap quyen chay script:
 
 ```bash
-chmod +x run-server-macos.sh run-app-macos.sh run-server-linux.sh run-app-linux.sh
+chmod +x run-server-linux.sh run-app-linux.sh
+```
+
+Chay Server:
+
+```bash
 ./run-server-linux.sh
+```
+
+Chay Client:
+
+```bash
 ./run-app-linux.sh --server-host localhost --port 5050
 ```
 
-Tren macOS thay hau to `linux` bang `macos`.
+### macOS
 
-## Cau hinh database
+Cap quyen chay script:
 
-Tao `config/database.properties` dua tren `config/database.properties.example`, hoac truyen system properties `auction.db.*`, hoac dung bien moi truong `AUCTION_DB_*`. File `config/database.properties` duoc bo qua boi Git de khong day credential len repository.
+```bash
+chmod +x run-server-macos.sh run-app-macos.sh
+```
 
-## Test va CI
+Chay Server:
 
-Workflow nam tai `.github/workflows/java-ci.yml`.
+```bash
+./run-server-macos.sh
+```
 
-```powershell
+Chay Client:
+
+```bash
+./run-app-macos.sh --server-host localhost --port 5050
+```
+
+## 5. Huong dan chay Server/Client theo thu tu cu the
+
+### Buoc 1. Clone repo va di chuyen vao thu muc du an
+
+```bash
+git clone <repo-url>
+cd do-fast-leave-fast
+```
+
+### Buoc 2. Cau hinh database
+
+- Tao database PostgreSQL
+- Tao file `config/database.properties`
+- Dien thong tin ket noi database vao file cau hinh
+
+### Buoc 3. Tai dependencies
+
+```bash
+mvn dependency:go-offline
+```
+
+### Buoc 4. Khoi dong Server
+
+Chon lenh phu hop voi he dieu hanh:
+
+- Windows: `.\run-server.ps1`
+- Linux: `./run-server-linux.sh`
+- macOS: `./run-server-macos.sh`
+
+Khi server da mo cong `5050`, giu nguyen cua so terminal nay.
+
+### Buoc 5. Khoi dong Client
+
+Mo terminal thu hai va chay lenh phu hop voi he dieu hanh:
+
+- Windows: `.\run-app.ps1`
+- Linux: `./run-app-linux.sh --server-host localhost --port 5050`
+- macOS: `./run-app-macos.sh --server-host localhost --port 5050`
+
+Neu client chay tren may khac, thay `localhost` bang IP hoac domain cua may dang chay server.
+
+### Tai khoan mau
+
+- `bidder / bidder123`
+- `seller / seller123`
+- `admin / admin`
+
+## 6. Danh sach chuc nang da hoan thanh
+
+- Dang nhap theo 3 vai tro: `Bidder`, `Seller`, `Admin`
+- Dang ky tai khoan cho `Bidder` va `Seller`
+- Seller tao, xem, sua, xoa phien dau gia
+- Seller tai anh san pham dinh dang `PNG`, `JPG`, `GIF`, `BMP` toi da 2 MB
+- Dat gia realtime qua TCP socket
+- Ho tro auto-bidding
+- Ho tro anti-sniping
+- Tu dong dong phien dau gia, xac dinh nguoi thang va xu ly thanh toan
+- Nap tien thong qua yeu cau cho Admin phe duyet
+- Admin quan ly nguoi dung, giao dich, thanh toan va thong bao
+- Hien thi bieu do lich su gia realtime
+- Kiem thu bang `JUnit 5`
+- Do coverage bang `JaCoCo`
+- Kiem tra coding convention bang `Checkstyle`
+- CI bang GitHub Actions
+- Static analysis bang Qodana
+
+## 7. Test va CI/CD
+
+Chay test va quality check bang Maven:
+
+```bash
 mvn verify
 ```
 
-Lenh nay chay:
+CI hien co trong repo:
 
-- JUnit 5
-- Integration test TCP socket cho request loi, subscribe token va realtime event
-- JaCoCo coverage report
-- JaCoCo gate yeu cau coverage domain `server.model.*` tu 60% tro len
-- Checkstyle coding convention
+- `.github/workflows/java-ci.yml`: build va chay `mvn verify`
+- `.github/workflows/qodana_code_quality.yml`: phan tich chat luong ma nguon bang Qodana
 
-Bao cao coverage day du nam tai `target/site/jacoco/index.html`.
+Hien tai repo da co CI, chua co workflow CD/deploy rieng.
 
-## Link Video và Bao Cao cua nhom 3: 
-Link: [Drive](https://drive.google.com/drive/folders/12W6M35Lm4njqpmqIvMl3RBiqyBoz0HHV?usp=sharing)
+## 8. Link bao cao PDF va video demo
+
+- Bao cao PDF va video demo: [Google Drive](https://drive.google.com/drive/folders/12W6M35Lm4njqpmqIvMl3RBiqyBoz0HHV?usp=sharing)
+
+## 9. Ghi chu
+
+- Trong moi truong hien tai, minh da doi chieu cau lenh voi cac script Windows, Linux va macOS co san trong repo.
+- Minh khong the thuc thi truc tiep Linux/macOS trong workspace Windows nay, nen README duoc viet theo dung script hien co cua du an.
