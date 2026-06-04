@@ -201,13 +201,14 @@ Neu client chay tren may khac, thay `localhost` bang IP hoac domain cua may dang
 
 - Dang nhap theo 3 vai tro: `Bidder`, `Seller`, `Admin`
 - Dang ky tai khoan cho `Bidder` va `Seller`
-- Seller tao, xem, sua, xoa phien dau gia
+- Seller tao, xem, sua, xoa phien dau gia 
 - Seller tai anh san pham dinh dang `PNG`, `JPG`, `GIF`, `BMP` toi da 2 MB
 - Dat gia realtime qua TCP socket
 - Ho tro auto-bidding
 - Ho tro anti-sniping
 - Tu dong dong phien dau gia, xac dinh nguoi thang va xu ly thanh toan
 - Nap tien thong qua yeu cau cho Admin phe duyet
+- Bidder va Seller co the rut tien (truc tiep tru vao tai khoan cua user khong can xac nhan cua admin)
 - Admin quan ly nguoi dung, giao dich, thanh toan va thong bao
 - Hien thi bieu do lich su gia realtime
 - Kiem thu bang `JUnit 5`
